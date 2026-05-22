@@ -152,6 +152,35 @@ Use an HTTP Request node:
 - Route blocked responses to a human review, summarization, or RAG workflow.
 - Store `task_id`, `run_id`, `recommended_model`, `estimated_cost_usd`, and `stop_rules` in your workflow logs.
 
+## GitHub Repository Provisioning
+
+ANTS can prepare GitHub repositories through a protected gateway endpoint. Configure the token only at runtime:
+
+```env
+ANTS_GITHUB_TOKEN=
+GITHUB_API_BASE_URL=https://api.github.com
+```
+
+Use a fine-grained token with the minimum repository administration permission needed. Do not send tokens in request bodies and do not commit them.
+
+Dry-run first:
+
+```bash
+curl -s -X POST http://localhost:8010/github/repositories \
+  -H "Content-Type: application/json" \
+  -H "X-ANTS-API-Key: $ANTS_KEY" \
+  -d '{"name":"ants-ai-gateway","visibility":"public","dry_run":true}'
+```
+
+Live creation requires both `dry_run:false` and `explicitly_authorized:true`:
+
+```bash
+curl -s -X POST http://localhost:8010/github/repositories \
+  -H "Content-Type: application/json" \
+  -H "X-ANTS-API-Key: $ANTS_KEY" \
+  -d '{"name":"ants-ai-gateway","visibility":"public","dry_run":false,"explicitly_authorized":true}'
+```
+
 ## Codex, Antigravity, Roo, Cline, Continue
 
 Configure agents to call this gateway instead of calling OpenRouter directly:

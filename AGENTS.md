@@ -29,6 +29,7 @@ Agents working in this repository must preserve the ANTS operating model:
 - Codex and Claude Code must manage their own official auth stores; do not store their OAuth tokens in this repository.
 - `/executors/sessions` may report `configured` when safe references exist, but `authenticated` requires a trusted smoke test or explicit trusted runtime override.
 - Subprocess execution must avoid shell interpolation, validate workspace roots, close stdin when needed, and sanitize stdout/stderr.
+- GitHub repository creation must use runtime tokens only, default to dry-run, and require explicit authorization before live creation.
 
 ## Harnesses
 

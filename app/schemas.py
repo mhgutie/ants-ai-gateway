@@ -221,3 +221,36 @@ class ExecutorCredentialPoolStatus(BaseModel):
     credential_counts: dict[str, int] = Field(default_factory=dict)
     updated_at: str | None = None
     error: str | None = None
+
+
+class GitHubRepositoryCreateRequest(BaseModel):
+    name: str
+    description: str | None = None
+    visibility: Literal["public", "private"] = "private"
+    owner_type: Literal["user", "organization"] = "user"
+    owner: str | None = None
+    dry_run: bool = True
+    explicitly_authorized: bool = False
+    has_issues: bool = True
+    has_projects: bool = True
+    has_wiki: bool = False
+    auto_init: bool = False
+    allow_squash_merge: bool = True
+    allow_merge_commit: bool = False
+    allow_rebase_merge: bool = True
+    delete_branch_on_merge: bool = True
+
+
+class GitHubRepositoryCreateResponse(BaseModel):
+    dry_run: bool
+    created: bool
+    name: str
+    full_name: str
+    owner: str | None = None
+    visibility: str
+    private: bool
+    html_url: str | None = None
+    clone_url: str | None = None
+    default_branch: str | None = None
+    api_endpoint: str
+    reason: str

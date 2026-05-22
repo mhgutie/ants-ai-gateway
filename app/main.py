@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.cost_calculator import real_cost_usd
 from app.db import db_status
 from app.executor_credentials import load_executor_credential_pool_status
+from app.github_repositories import GitHubRepositoryProvisioningError, create_github_repository
 from app.model_router import list_models, provider_for
 from app.providers import get_provider_client
 from app.schemas import (
@@ -20,6 +21,8 @@ from app.schemas import (
     ExecutorCredentialPoolStatus,
     ExecutorSmokeRequest,
     ExecutorSmokeResponse,
+    GitHubRepositoryCreateRequest,
+    GitHubRepositoryCreateResponse,
     ExecutorSessionsResponse,
     PreflightRequest,
     PreflightResponse,
@@ -76,6 +79,18 @@ async def executor_credentials_status() -> ExecutorCredentialPoolStatus:
 )
 async def executor_smoke_test(request: ExecutorSmokeRequest) -> ExecutorSmokeResponse:
     return await run_executor_smoke(request)
+
+
+@app.post(
+    "/github/repositories",
+    response_model=GitHubRepositoryCreateResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def github_repository_create(request: GitHubRepositoryCreateRequest) -> GitHubRepositoryCreateResponse:
+    try:
+        return await create_github_repository(request)
+    except GitHubRepositoryProvisioningError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/estimate", response_model=EstimateResponse, dependencies=[Depends(require_gateway_api_key)])
