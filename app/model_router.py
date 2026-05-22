@@ -6,7 +6,7 @@ from app.config import get_models_config, get_routing_rules
 from app.schemas import TaskType
 
 
-IMPLEMENTED_PROVIDERS = {"openrouter", "qwen"}
+IMPLEMENTED_PROVIDERS = {"openrouter", "qwen", "deepseek", "kimi"}
 
 
 def list_models() -> dict:

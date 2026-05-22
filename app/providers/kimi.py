@@ -1,8 +1,7 @@
 from app.providers.base import ProviderClient
+from app.providers.openai_compatible import OpenAICompatibleChatMixin
 
 
-class KimiClient(ProviderClient):
+class KimiClient(OpenAICompatibleChatMixin, ProviderClient):
     name = "kimi"
-
-    async def chat(self, *, model, messages, max_tokens, account_id=None):
-        raise NotImplementedError("Kimi direct provider is a v0.1 stub. Use OpenRouter.")
+    default_base_url = "https://api.moonshot.ai/v1"

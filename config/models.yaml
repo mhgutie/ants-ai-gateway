@@ -39,8 +39,8 @@ models:
     notes: "Preferred validator for coding/workflow PR-quality review. Direct OpenAI/Codex execution adapter is not implemented in v0.1."
 
   deepseek-v4-flash:
-    provider: openrouter
-    model_id: deepseek/deepseek-v4-flash
+    provider: deepseek
+    model_id: deepseek-v4-flash
     enabled: true
     execution_enabled: true
     preferred_provider: ollama_or_deepseek_direct
@@ -56,11 +56,11 @@ models:
     cost_tier: low
     input_cost_per_1m_tokens: 0.112
     output_cost_per_1m_tokens: 0.224
-    notes: "Default cheap worker for bulk text tasks. Prefer Ollama or DeepSeek direct when a verified endpoint exists; OpenRouter remains the current executable v0.1 path."
+    notes: "Default cheap worker for bulk text tasks. Uses DeepSeek direct OpenAI-compatible API when DEEPSEEK_API_KEY is configured; OpenRouter can still be used via explicit provider override if needed."
 
   deepseek-v4-pro:
-    provider: openrouter
-    model_id: deepseek/deepseek-v4-pro
+    provider: deepseek
+    model_id: deepseek-v4-pro
     enabled: true
     execution_enabled: true
     preferred_provider: ollama_or_deepseek_direct
@@ -76,7 +76,7 @@ models:
     cost_tier: medium
     input_cost_per_1m_tokens: 0.435
     output_cost_per_1m_tokens: 0.87
-    notes: "Strong reasoning route. Prefer Ollama or DeepSeek direct when verified; OpenRouter remains the current executable v0.1 path."
+    notes: "Strong reasoning route. Uses DeepSeek direct OpenAI-compatible API when DEEPSEEK_API_KEY is configured; OpenRouter can still be used via explicit provider override if needed."
 
   qwen3-coder:
     provider: qwen
@@ -117,10 +117,10 @@ models:
     notes: "Use for screenshots, UI/n8n visual debugging, visual OCR, and multimodal review. Direct Qwen adapter is not implemented in v0.1."
 
   kimi-k2.6:
-    provider: ollama
+    provider: kimi
     model_id: kimi-k2.6
     enabled: true
-    execution_enabled: false
+    execution_enabled: true
     role: product builder and multi-agent planner
     use_cases:
       - product_design
@@ -133,7 +133,7 @@ models:
     cost_tier: high
     input_cost_per_1m_tokens: 0.73
     output_cost_per_1m_tokens: 3.49
-    notes: "Primary product-builder model. Prefer Ollama or Kimi direct when a verified endpoint exists; adapter is not implemented in v0.1."
+    notes: "Primary product-builder model. Uses Kimi/Moonshot direct OpenAI-compatible API when KIMI_API_KEY is configured."
 
   gemini-3.5-flash:
     provider: google
