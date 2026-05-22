@@ -1,8 +1,7 @@
 from app.providers.base import ProviderClient
+from app.providers.openai_compatible import OpenAICompatibleChatMixin
 
 
-class DeepSeekClient(ProviderClient):
+class DeepSeekClient(OpenAICompatibleChatMixin, ProviderClient):
     name = "deepseek"
-
-    async def chat(self, *, model, messages, max_tokens, account_id=None):
-        raise NotImplementedError("DeepSeek direct provider is a v0.1 stub. Use OpenRouter.")
+    default_base_url = "https://api.deepseek.com"

@@ -1,4 +1,5 @@
 import asyncio
+import socket
 
 import pytest
 
@@ -37,3 +38,29 @@ def test_db_status_reports_connection_error(monkeypatch):
     assert status["reachable"] is False
     assert status["status"] == "error"
     assert status["error_type"] == "OSError"
+    assert status["target"]["host"] == "example"
+    assert "Database network connection failed" in status["hint"]
+
+
+def test_db_status_reports_dns_error_without_leaking_credentials(monkeypatch):
+    class _BrokenContext:
+        async def __aenter__(self):
+            raise socket.gaierror("temporary failure")
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(db, "get_settings", lambda: _Settings("postgresql://user:secret@example.local:5432/postgres"))
+    monkeypatch.setattr(db, "db_connection", lambda: _BrokenContext())
+
+    status = asyncio.run(db.db_status())
+
+    assert status["error_type"] == "gaierror"
+    assert status["target"] == {
+        "scheme": "postgresql",
+        "host": "example.local",
+        "port": 5432,
+        "database": "postgres",
+    }
+    assert "secret" not in str(status)
+    assert "could not be resolved" in status["hint"]

@@ -39,7 +39,9 @@ OPENAI_API_KEY=
 GEMINI_API_KEY=
 GOOGLE_API_KEY=
 DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
 KIMI_API_KEY=
+KIMI_BASE_URL=https://api.moonshot.ai/v1
 QWEN_API_KEY=
 QWEN_BASE_URL=https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
 NVIDIA_NIM_API_KEY=
@@ -69,6 +71,14 @@ QWEN__1__API_KEY=
 QWEN__2__API_KEY=
 OPENROUTER__1__API_KEY=
 OPENROUTER__2__API_KEY=
+DEEPSEEK__1__API_KEY=
+DEEPSEEK__1__BASE_URL=https://api.deepseek.com
+DEEPSEEK__2__API_KEY=
+DEEPSEEK__2__BASE_URL=https://api.deepseek.com
+KIMI__1__API_KEY=
+KIMI__1__BASE_URL=https://api.moonshot.ai/v1
+KIMI__2__API_KEY=
+KIMI__2__BASE_URL=https://api.moonshot.ai/v1
 ```
 
 ## Docker
@@ -85,6 +95,17 @@ On the VPS, Supabase already uses port `8000`, so run the gateway on `8010`:
 
 ```env
 ANTS_GATEWAY_PORT=8010
+```
+
+If the gateway must connect to the self-hosted Supabase database from a separate Supabase Compose project, use the Supabase network override and set `SUPABASE_DB_URL` to the Supabase container hostname, for example `supabase-db`:
+
+```env
+SUPABASE_DB_URL=postgresql://postgres:YOUR_PASSWORD@supabase-db:5432/postgres
+ANTS_SUPABASE_DOCKER_NETWORK=supabase_default
+```
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d --build
 ```
 
 Check protected dependency status:
