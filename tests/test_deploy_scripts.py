@@ -7,6 +7,8 @@ def test_vps_deploy_script_uses_supabase_compose_override():
     assert "docker-compose.supabase.yml" in script
     assert "docker network inspect" in script
     assert "/dependencies" in script
+    assert "seq 1 20" in script
+    assert "docker compose logs --tail 120" in script
     assert "ANTS_GATEWAY_API_KEY" in script
 
 

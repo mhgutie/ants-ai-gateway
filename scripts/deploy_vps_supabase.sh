@@ -20,7 +20,17 @@ ANTS_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' .env | cut -d= -f2-)"
 PORT="$(grep '^ANTS_GATEWAY_PORT=' .env | cut -d= -f2- || true)"
 PORT="${PORT:-8010}"
 
-curl -fsS "http://localhost:${PORT}/health"
+for attempt in $(seq 1 20); do
+  if curl -fsS "http://localhost:${PORT}/health"; then
+    break
+  fi
+  if [ "$attempt" = "20" ]; then
+    echo "Gateway did not become healthy after ${attempt} attempts." >&2
+    docker compose logs --tail 120 ants-ai-gateway >&2
+    exit 1
+  fi
+  sleep 2
+done
 echo
 curl -fsS -H "X-ANTS-API-Key: ${ANTS_KEY}" "http://localhost:${PORT}/dependencies"
 echo

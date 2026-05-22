@@ -14,7 +14,7 @@ Provide repeatable host-side scripts for the VPS deployment path and direct prov
   - Require an existing `.env`.
   - Verify the external Supabase Docker network exists.
   - Use `docker-compose.supabase.yml`.
-  - Validate `/health`.
+  - Wait for `/health` with retries after container restart.
   - Validate protected `/dependencies`.
 - `scripts/smoke_direct_providers.sh` must:
   - Use the configured gateway API key.
