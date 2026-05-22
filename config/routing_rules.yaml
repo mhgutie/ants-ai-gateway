@@ -1,0 +1,79 @@
+classification:
+  primary: deepseek-v4-flash
+  fallback: gemini-3.1-flash-lite
+  validator: gpt-5.5
+
+simple_extraction:
+  primary: deepseek-v4-flash
+  fallback: gemini-3.1-flash-lite
+  validator: gpt-5.5
+
+high_volume_extraction:
+  primary: gemini-3.1-flash-lite
+  fallback: deepseek-v4-flash
+  validator: gpt-5.5
+
+coding_debug:
+  primary: qwen3-coder
+  fallback: kimi-k2.6
+  validator: gpt-5.4
+
+workflow_debug:
+  primary: qwen3-coder
+  fallback: kimi-k2.6
+  validator: gpt-5.4
+
+product_design:
+  primary: kimi-k2.6
+  fallback: deepseek-v4-pro
+  validator: gpt-5.5
+
+architecture:
+  primary: deepseek-v4-pro
+  fallback: gemini-3.1-pro
+  validator: gpt-5.5
+
+visual_analysis:
+  primary: qwen3-vl
+  fallback: gemini-3.5-flash
+  validator: gpt-5.5
+
+long_document:
+  primary: gemini-3.5-flash
+  fallback: gemini-2.5-flash
+  validator: gpt-5.5
+
+google_workspace_processing:
+  primary: gemini-3.5-flash
+  fallback: gemini-2.5-flash
+  validator: gpt-5.5
+
+complex_reasoning:
+  primary: gemini-3.1-pro
+  fallback: deepseek-v4-pro
+  validator: gpt-5.5
+
+custom_tool_agent:
+  primary: gemini-3.1-pro
+  fallback: qwen3-coder
+  validator: gpt-5.5
+
+realtime_voice:
+  primary: gemini-live
+  fallback: gpt-5.5
+  validator: gpt-5.5
+
+text_to_speech:
+  primary: gemini-tts
+  fallback: null
+  validator: null
+
+image_generation:
+  primary: gemini-image
+  fallback: null
+  validator: gpt-5.5
+
+final_validation:
+  primary: gpt-5.5
+  fallback: gpt-5.4
+  validator: null

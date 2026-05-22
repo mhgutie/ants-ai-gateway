@@ -1,0 +1,35 @@
+schema_version: "2026-05-22"
+
+sessions:
+  - executor: codex
+    session_ref: codex-local-default
+    label: local Codex session
+    auth_mode: chatgpt
+    status: pending_auth
+    credential_storage: external_codex_auth_store
+    workspace_root: ""
+    allowed_roots: []
+    last_checked_at: null
+    last_status_reason: "Run official Codex login/session setup on the executor host. Do not store tokens here."
+
+  - executor: claude_code
+    session_ref: claude-code-local-default
+    label: local Claude Code session
+    auth_mode: official_login_or_api_key
+    status: pending_auth
+    credential_storage: external_claude_code_auth_store
+    workspace_root: ""
+    allowed_roots: []
+    last_checked_at: null
+    last_status_reason: "Authenticate Claude Code outside ANTS and store only this safe session reference."
+
+  - executor: antigravity
+    session_ref: antigravity-local-default
+    label: local Antigravity session
+    auth_mode: official_cli_or_connector
+    status: pending_auth
+    credential_storage: external_antigravity_auth_store
+    workspace_root: ""
+    allowed_roots: []
+    last_checked_at: null
+    last_status_reason: "Enable after official CLI/connector installation and smoke test."

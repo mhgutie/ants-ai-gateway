@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  review_details: true
+  path_filters:
+    - "!**/.venv/**"
+    - "!**/__pycache__/**"
+    - "!**/.pytest_cache/**"
+    - "!**/*.tar.gz"
+    - "!**/*.zip"
+    - "!**/*.log"
+    - "!config/*.backup.yaml"
+  path_instructions:
+    - path: "app/**/*.py"
+      instructions: >
+        Prioritize security, secret redaction, authentication boundaries, subprocess safety,
+        root/path validation, provider routing correctness, and failure modes. Do not ask
+        to store provider keys, OAuth tokens, refresh tokens, or id tokens in repository files.
+    - path: "tests/**/*.py"
+      instructions: >
+        Treat fake token strings as test fixtures only when they are clearly synthetic.
+        Check that tests prove secrets are sanitized and that important behavior has harness coverage.
+    - path: "config/**/*.yaml"
+      instructions: >
+        Verify that executor/provider policy stays declarative, avoids real credentials,
+        and does not permit profile rotation to evade provider rate limits.
+    - path: "docs/**/*.md"
+      instructions: >
+        Check that public documentation does not disclose operational secrets, private hostnames,
+        real keys, or unsafe deployment shortcuts.
+  pre_merge_checks:
+    custom_checks:
+      - name: "No committed secrets"
+        mode: "warning"
+        instructions: >
+          Fail this check if the PR adds real provider API keys, OAuth access tokens,
+          refresh tokens, id tokens, private keys, populated .env files, encrypted credential
+          blobs, or local credential stores. .env.example with empty values is acceptable.
+      - name: "ANTS harness evidence"
+        mode: "warning"
+        instructions: >
+          The PR description must include validation evidence for relevant harnesses
+          such as pytest, executor smoke tests, package checks, or manual deployment smoke tests.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "SPEC.md"
+      - "specs/**/*.md"
+      - "docs/adr/**/*.md"

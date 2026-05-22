@@ -1,0 +1,295 @@
+catalog_version: "2026-05-21"
+pricing_unit: "usd_per_1m_tokens"
+
+models:
+  gpt-5.5:
+    provider: openai
+    model_id: gpt-5.5
+    enabled: true
+    execution_enabled: false
+    role: final validator and high-trust synthesis model
+    use_cases:
+      - final_validation
+      - executive_synthesis
+      - critical_review
+      - multimodal_quality_check
+    context_window: 1000000
+    max_output_tokens: 128000
+    cost_tier: premium
+    input_cost_per_1m_tokens: 5.00
+    output_cost_per_1m_tokens: 30.00
+    notes: "Preferred final validator. Direct OpenAI/Codex execution adapter is not implemented in v0.1; verify API access before production execution."
+
+  gpt-5.4:
+    provider: openai
+    model_id: gpt-5.4
+    enabled: true
+    execution_enabled: false
+    role: senior validator for coding and workflow outputs
+    use_cases:
+      - coding_validation
+      - workflow_validation
+      - regression_review
+      - implementation_quality_check
+    context_window: 1000000
+    max_output_tokens: 128000
+    cost_tier: premium
+    input_cost_per_1m_tokens: 2.50
+    output_cost_per_1m_tokens: 15.00
+    notes: "Preferred validator for coding/workflow PR-quality review. Direct OpenAI/Codex execution adapter is not implemented in v0.1."
+
+  deepseek-v4-flash:
+    provider: openrouter
+    model_id: deepseek/deepseek-v4-flash
+    enabled: true
+    execution_enabled: true
+    preferred_provider: ollama_or_deepseek_direct
+    role: low-cost high-throughput operational model
+    use_cases:
+      - classification
+      - simple_extraction
+      - normalization
+      - preliminary_summaries
+      - cheap_agent_loops
+    context_window: 1000000
+    max_output_tokens: 384000
+    cost_tier: low
+    input_cost_per_1m_tokens: 0.112
+    output_cost_per_1m_tokens: 0.224
+    notes: "Default cheap worker for bulk text tasks. Prefer Ollama or DeepSeek direct when a verified endpoint exists; OpenRouter remains the current executable v0.1 path."
+
+  deepseek-v4-pro:
+    provider: openrouter
+    model_id: deepseek/deepseek-v4-pro
+    enabled: true
+    execution_enabled: true
+    preferred_provider: ollama_or_deepseek_direct
+    role: complex reasoning and architecture model
+    use_cases:
+      - architecture
+      - complex_reasoning
+      - strategic_debugging
+      - long_horizon_planning
+      - codebase_analysis
+    context_window: 1000000
+    max_output_tokens: 384000
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.435
+    output_cost_per_1m_tokens: 0.87
+    notes: "Strong reasoning route. Prefer Ollama or DeepSeek direct when verified; OpenRouter remains the current executable v0.1 path."
+
+  qwen3-coder:
+    provider: qwen
+    model_id: qwen3-coder-30b-a3b-instruct
+    enabled: true
+    execution_enabled: true
+    role: implementation and coding specialist
+    use_cases:
+      - coding_debug
+      - workflow_debug
+      - repository_reasoning
+      - tool_use
+      - code_generation
+    context_window: 1000000
+    max_output_tokens: 66000
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.22
+    output_cost_per_1m_tokens: 1.80
+    notes: "Primary implementation model for MVP smoke tests and low-cost coding tasks. Uses Qwen Studio direct OpenAI-compatible endpoint before OpenRouter. Upgrade to qwen3-coder-480b-a35b-instruct for heavier coding tasks."
+
+  qwen3-vl:
+    provider: qwen
+    model_id: qwen3-vl
+    enabled: true
+    execution_enabled: false
+    role: visual and multimodal analyst
+    use_cases:
+      - visual_analysis
+      - screenshot_debugging
+      - document_vision
+      - chart_analysis
+      - multilingual_ocr
+    context_window: 262144
+    max_output_tokens: 32000
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.20
+    output_cost_per_1m_tokens: 0.88
+    notes: "Use for screenshots, UI/n8n visual debugging, visual OCR, and multimodal review. Direct Qwen adapter is not implemented in v0.1."
+
+  kimi-k2.6:
+    provider: ollama
+    model_id: kimi-k2.6
+    enabled: true
+    execution_enabled: false
+    role: product builder and multi-agent planner
+    use_cases:
+      - product_design
+      - mvp_planning
+      - solution_architecture
+      - multi_agent_orchestration
+      - ui_generation
+    context_window: 262144
+    max_output_tokens: 66000
+    cost_tier: high
+    input_cost_per_1m_tokens: 0.73
+    output_cost_per_1m_tokens: 3.49
+    notes: "Primary product-builder model. Prefer Ollama or Kimi direct when a verified endpoint exists; adapter is not implemented in v0.1."
+
+  gemini-3.5-flash:
+    provider: google
+    model_id: gemini-3.5-flash
+    enabled: true
+    execution_enabled: false
+    role: long-context multimodal Flash model
+    use_cases:
+      - long_document
+      - google_workspace_processing
+      - multimodal_context
+      - parallel_agent_loops
+      - coding_assistance
+    context_window: 1000000
+    max_output_tokens: 66000
+    cost_tier: high
+    input_cost_per_1m_tokens: 1.50
+    output_cost_per_1m_tokens: 9.00
+    notes: "Use Google direct API for Gemini to avoid unnecessary OpenRouter spend. Google adapter is not implemented in v0.1."
+
+  gemini-3.1-pro:
+    provider: google
+    model_id: gemini-3.1-pro
+    enabled: false
+    execution_enabled: false
+    role: proposed Gemini Pro reasoning route
+    use_cases:
+      - complex_reasoning
+      - custom_tool_agent
+      - advanced_google_workspace_processing
+    context_window: 1000000
+    max_output_tokens: 66000
+    cost_tier: high
+    input_cost_per_1m_tokens: 0.00
+    output_cost_per_1m_tokens: 0.00
+    notes: "Provider model ID appears unavailable or provider-dependent; verify before production use."
+
+  gemini-3.1-flash-lite:
+    provider: google
+    model_id: gemini-3.1-flash-lite
+    enabled: true
+    execution_enabled: false
+    role: low-latency high-volume extraction model
+    use_cases:
+      - high_volume_extraction
+      - classification_fallback
+      - simple_extraction_fallback
+      - lightweight_agentic_workflows
+    context_window: 1050000
+    max_output_tokens: 66000
+    cost_tier: low
+    input_cost_per_1m_tokens: 0.25
+    output_cost_per_1m_tokens: 1.50
+    notes: "Cheap Gemini route for high-volume extraction. Google adapter is not implemented in v0.1."
+
+  gemini-2.5-flash:
+    provider: google
+    model_id: gemini-2.5-flash
+    enabled: true
+    execution_enabled: false
+    role: stable long-context Flash fallback
+    use_cases:
+      - long_document_fallback
+      - google_workspace_processing_fallback
+      - multimodal_context
+      - general_reasoning
+    context_window: 1000000
+    max_output_tokens: 66000
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.30
+    output_cost_per_1m_tokens: 2.50
+    notes: "Stable fallback for Gemini long-context tasks. Google adapter is not implemented in v0.1."
+
+  gemini-2.5-pro:
+    provider: google
+    model_id: gemini-2.5-pro
+    enabled: true
+    execution_enabled: false
+    role: stable Gemini Pro fallback
+    use_cases:
+      - advanced_reasoning
+      - scientific_reasoning
+      - coding_reasoning
+      - long_context_review
+    context_window: 1000000
+    max_output_tokens: 66000
+    cost_tier: high
+    input_cost_per_1m_tokens: 1.25
+    output_cost_per_1m_tokens: 10.00
+    notes: "Available as a conservative Gemini Pro fallback if Gemini 3.1 Pro is not verified. Google adapter is not implemented in v0.1."
+
+  gemini-live:
+    provider: google
+    model_id: gemini-live
+    enabled: false
+    execution_enabled: false
+    role: realtime voice and multimodal session model
+    use_cases:
+      - realtime_voice
+      - live_audio_interaction
+      - conversational_agent_sessions
+    context_window: 32000
+    max_output_tokens: 8000
+    cost_tier: high
+    input_cost_per_1m_tokens: 0.00
+    output_cost_per_1m_tokens: 0.00
+    notes: "Realtime provider integration is not implemented in v0.1; verify provider endpoint and pricing before production use."
+
+  gemini-tts:
+    provider: google
+    model_id: gemini-tts
+    enabled: false
+    execution_enabled: false
+    role: text-to-speech generation model
+    use_cases:
+      - text_to_speech
+      - voice_generation
+      - multilingual_audio_output
+    context_window: 32000
+    max_output_tokens: 0
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.00
+    output_cost_per_1m_tokens: 0.00
+    notes: "Uses a non-chat audio endpoint; provider calling logic is not implemented in v0.1."
+
+  gemini-image:
+    provider: google
+    model_id: gemini-image
+    enabled: false
+    execution_enabled: false
+    role: image generation and editing model
+    use_cases:
+      - image_generation
+      - image_editing
+      - visual_asset_creation
+    context_window: 131000
+    max_output_tokens: 0
+    cost_tier: medium
+    input_cost_per_1m_tokens: 0.50
+    output_cost_per_1m_tokens: 3.00
+    notes: "Image generation requires multimodal/image response handling not implemented in v0.1; verify before production use."
+
+  nvidia-nim:
+    provider: openrouter
+    model_id: nvidia/llama-3.3-nemotron-super-49b-v1.5
+    enabled: true
+    execution_enabled: true
+    role: GPU-optimized reasoning and tool-use route
+    use_cases:
+      - rag
+      - tool_calling
+      - efficient_reasoning
+      - nvidia_endpoint_experiments
+    context_window: 131072
+    max_output_tokens: 32000
+    cost_tier: low
+    input_cost_per_1m_tokens: 0.10
+    output_cost_per_1m_tokens: 0.40
+    notes: "External NVIDIA-hosted or OpenRouter route only; do not assume local VPS can run NIM inference."

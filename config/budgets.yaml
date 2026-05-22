@@ -1,0 +1,77 @@
+default:
+  max_total_cost_usd: 0.10
+  max_iterations: 2
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 2000
+
+coding_debug:
+  max_total_cost_usd: 0.25
+  max_iterations: 3
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 3000
+
+workflow_debug:
+  max_total_cost_usd: 0.20
+  max_iterations: 2
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 2500
+
+product_design:
+  max_total_cost_usd: 0.50
+  max_iterations: 2
+  max_input_tokens_per_call: 64000
+  max_output_tokens_per_call: 5000
+
+architecture:
+  max_total_cost_usd: 0.50
+  max_iterations: 2
+  max_input_tokens_per_call: 64000
+  max_output_tokens_per_call: 5000
+
+final_validation:
+  max_total_cost_usd: 0.30
+  max_iterations: 1
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 3000
+
+high_volume_extraction:
+  max_total_cost_usd: 0.15
+  max_iterations: 2
+  max_input_tokens_per_call: 64000
+  max_output_tokens_per_call: 3000
+
+google_workspace_processing:
+  max_total_cost_usd: 0.35
+  max_iterations: 2
+  max_input_tokens_per_call: 128000
+  max_output_tokens_per_call: 5000
+
+complex_reasoning:
+  max_total_cost_usd: 0.50
+  max_iterations: 2
+  max_input_tokens_per_call: 64000
+  max_output_tokens_per_call: 5000
+
+custom_tool_agent:
+  max_total_cost_usd: 0.40
+  max_iterations: 3
+  max_input_tokens_per_call: 64000
+  max_output_tokens_per_call: 5000
+
+realtime_voice:
+  max_total_cost_usd: 0.30
+  max_iterations: 1
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 8000
+
+text_to_speech:
+  max_total_cost_usd: 0.10
+  max_iterations: 1
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 0
+
+image_generation:
+  max_total_cost_usd: 0.25
+  max_iterations: 1
+  max_input_tokens_per_call: 32000
+  max_output_tokens_per_call: 0
