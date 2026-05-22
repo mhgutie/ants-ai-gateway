@@ -3,12 +3,22 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ ! -f .env ]; then
+  echo "Missing .env. Copy .env.example to .env and configure runtime secrets first." >&2
+  exit 1
+fi
+
 ANTS_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' .env | cut -d= -f2-)"
 PORT="$(grep '^ANTS_GATEWAY_PORT=' .env | cut -d= -f2- || true)"
 PORT="${PORT:-8010}"
 BASE_URL="http://localhost:${PORT}"
 
-curl -fsS -X POST "${BASE_URL}/chat" \
+if [ -z "${ANTS_KEY}" ]; then
+  echo "Missing ANTS_GATEWAY_API_KEY in .env." >&2
+  exit 1
+fi
+
+curl --connect-timeout 2 --max-time 30 -fsS -X POST "${BASE_URL}/chat" \
   -H "Content-Type: application/json" \
   -H "X-ANTS-API-Key: ${ANTS_KEY}" \
   -d '{
@@ -23,7 +33,7 @@ curl -fsS -X POST "${BASE_URL}/chat" \
   }'
 echo
 
-curl -fsS -X POST "${BASE_URL}/chat" \
+curl --connect-timeout 2 --max-time 30 -fsS -X POST "${BASE_URL}/chat" \
   -H "Content-Type: application/json" \
   -H "X-ANTS-API-Key: ${ANTS_KEY}" \
   -d '{

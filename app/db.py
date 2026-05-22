@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import socket
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
 import asyncpg
@@ -17,10 +17,14 @@ def sanitized_database_target(database_url: str | None) -> dict[str, str | int |
     if not database_url:
         return {"scheme": None, "host": None, "port": None, "database": None}
     parsed = urlparse(database_url)
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
     return {
         "scheme": parsed.scheme or None,
         "host": parsed.hostname,
-        "port": parsed.port,
+        "port": port,
         "database": parsed.path.lstrip("/") or None,
     }
 

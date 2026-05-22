@@ -6,6 +6,10 @@ def test_vps_deploy_script_uses_supabase_compose_override():
 
     assert "docker-compose.supabase.yml" in script
     assert "docker network inspect" in script
+    assert "if [ ! -f .env" in script
+    assert 'if [ -z "${ANTS_KEY}" ]' in script
+    assert "--connect-timeout" in script
+    assert "--max-time" in script
     assert "/dependencies" in script
     assert "seq 1 20" in script
     assert "docker compose logs --tail 120" in script
@@ -15,6 +19,10 @@ def test_vps_deploy_script_uses_supabase_compose_override():
 def test_direct_provider_smoke_script_targets_deepseek_and_kimi():
     script = Path("scripts/smoke_direct_providers.sh").read_text()
 
+    assert "if [ ! -f .env" in script
+    assert 'if [ -z "${ANTS_KEY}" ]' in script
+    assert "--connect-timeout" in script
+    assert "--max-time" in script
     assert '"provider":"deepseek"' in script
     assert '"model":"deepseek-v4-flash"' in script
     assert '"provider":"kimi"' in script
