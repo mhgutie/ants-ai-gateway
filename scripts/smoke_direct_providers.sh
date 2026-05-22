@@ -8,7 +8,7 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-ANTS_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' .env | cut -d= -f2-)"
+ANTS_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' .env | cut -d= -f2- || true)"
 PORT="$(grep '^ANTS_GATEWAY_PORT=' .env | cut -d= -f2- || true)"
 PORT="${PORT:-8010}"
 BASE_URL="http://localhost:${PORT}"
