@@ -108,11 +108,23 @@ ANTS_SUPABASE_DOCKER_NETWORK=supabase_default
 docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d --build
 ```
 
+The VPS helper script wraps the same command and verifies the gateway is healthy:
+
+```bash
+bash scripts/deploy_vps_supabase.sh
+```
+
 Check protected dependency status:
 
 ```bash
 ANTS_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' .env | cut -d= -f2-)"
 curl -H "X-ANTS-API-Key: $ANTS_KEY" http://localhost:8010/dependencies
+```
+
+After configuring direct provider keys, run smoke tests for DeepSeek and Kimi:
+
+```bash
+bash scripts/smoke_direct_providers.sh
 ```
 
 ## Safe Release Package
