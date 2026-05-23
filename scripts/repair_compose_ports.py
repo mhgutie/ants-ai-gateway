@@ -27,7 +27,18 @@ except ImportError:
     sys.exit(1)
 
 
-PORT_MAPPING_RE = re.compile(r'^-\s+["\']?[\d.]*:?(\d+):\d+["\']?\s*$')
+# Matches numeric-only port mappings for pass 1 (harden: capture port to check against HARDEN_PORTS)
+NUMERIC_PORT_RE = re.compile(r'^-\s+["\']?[\d.]*:?(\d+):\d+(?:/\w+)?["\']?\s*$')
+# Matches any Docker port-mapping list item including ${VAR}:port/proto style for pass 2 (restore ports: key)
+ANY_PORT_RE = re.compile(
+    r'^-\s+["\']?'
+    r'(?:[\d.]+:)?'              # optional host IP
+    r'(?:\$\{[^}]+\}|\d+)'      # host port: ${VAR} or digits
+    r':'
+    r'(?:\$\{[^}]+\}|\d+)'      # container port: ${VAR} or digits
+    r'(?:/\w+)?'                 # optional /tcp /udp
+    r'["\']?\s*$'
+)
 HARDEN_PORTS = {5432, 6543}
 
 
@@ -49,11 +60,11 @@ def main():
     lines = path.read_text().splitlines(keepends=True)
     print(f"Read {len(lines)} lines from {path}")
 
-    # Pass 1: remove 5432/6543 port mapping lines
+    # Pass 1: remove 5432/6543 port mapping lines (numeric ports only)
     removed_ports = []
     after_p1 = []
     for i, line in enumerate(lines):
-        m = PORT_MAPPING_RE.match(line.strip())
+        m = NUMERIC_PORT_RE.match(line.strip())
         if m:
             port = int(m.group(1))
             if port in HARDEN_PORTS:
@@ -72,7 +83,7 @@ def main():
     while i < len(after_p1):
         line = after_p1[i]
         stripped = line.strip()
-        if PORT_MAPPING_RE.match(stripped):
+        if ANY_PORT_RE.match(stripped):
             # Check if previous non-empty line already has 'ports:'
             j = len(after_p2) - 1
             while j >= 0 and after_p2[j].strip() == "":

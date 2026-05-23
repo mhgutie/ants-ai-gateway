@@ -21,7 +21,13 @@ fi
 
 # --- Step 2: install pyyaml ---
 echo "[1/6] Installing pyyaml..."
-pip3 install pyyaml -q 2>&1 | tail -1
+if command -v pip3 &>/dev/null; then
+  pip3 install pyyaml -q 2>&1 | tail -1
+elif command -v pip &>/dev/null; then
+  pip install pyyaml -q 2>&1 | tail -1
+else
+  python3 -m pip install pyyaml -q 2>&1 | tail -1
+fi
 
 # --- Step 3: download repair script ---
 echo "[2/6] Downloading repair script..."
