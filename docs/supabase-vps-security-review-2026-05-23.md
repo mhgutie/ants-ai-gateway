@@ -203,6 +203,98 @@ docker compose exec db psql -U postgres -d postgres -c "\dp"
 6. Consider moving ANTS operational tables out of `public` into a private schema.
 7. Re-check self-hosted auth key guidance against the current Supabase docs before the next rollout.
 
+## Claude Code-Style Implementation Review
+
+This section reframes the VPS findings from an implementation and operations perspective, with emphasis on low-risk rollout, rollback awareness, and what should change first.
+
+### Recommended sequence
+
+1. Stop publishing the pooler on public interfaces.
+   - Remove the host port bindings for `5432` and `6543` from the Supabase pooler service.
+   - Keep the service reachable on the internal Docker network so Kong, gateway components, and maintenance containers still work.
+   - Validate with:
+
+   ```bash
+   docker ps --format '{{.Names}}\t{{.Ports}}'
+   ss -ltnp | egrep '(:5432|:6543)'
+   ```
+
+2. Keep the public entrypoint small and intentional.
+   - Prefer `80/443` on a reverse proxy in front of Kong.
+   - If `ants-ai-gateway` is not meant to be called directly from the public internet, remove the `8010` host binding as part of the same hardening pass or bind it to `127.0.0.1` temporarily.
+
+3. Introduce the reverse proxy before tightening application URLs.
+   - Stand up Caddy, Nginx, or Traefik first.
+   - Confirm health checks and upstream routing to Kong over the Docker network.
+   - Only then switch `SITE_URL`, `API_EXTERNAL_URL`, and any client-facing base URLs to HTTPS.
+
+4. Make the network change first, then handle secret storage.
+   - Removing unnecessary published ports is low-risk and high-value.
+   - Moving secrets to Docker secrets or another secret manager is still important, but it is a second-stage change because it touches more services and increases restart coordination.
+
+5. Triage Realtime before changing more than one infrastructure variable at a time.
+   - If Realtime is not needed yet, disable it rather than debugging it during the same window as the networking change.
+   - If it is needed, fix its health separately so failures are easier to attribute.
+
+6. Treat schema moves as a later hardening step.
+   - Moving ANTS operational tables out of `public` is a good defense-in-depth change.
+   - It is not the first live change to make because it can ripple into SQL, API assumptions, and app configuration.
+
+### Why internal Docker networking plus reverse proxy is the better target state
+
+- It matches Supabase's documented production posture for self-hosting: reverse proxy plus HTTPS in front of the API gateway.
+- It removes reliance on host firewall behavior as the main control for database exposure.
+- It reduces accidental public reachability caused by Docker port publications.
+- It creates a cleaner split:
+  - public edge: reverse proxy on `80/443`
+  - application edge: Kong and selected ANTS services
+  - private data plane: Postgres and Supavisor on the Docker network only
+
+### Hidden risks to watch
+
+- Docker Compose changes can recreate containers. If names, networks, or health checks differ from expectations, unrelated services may flap during `up -d`.
+- Some admin workflows may currently depend on direct host access to `5432` or `6543`. Before removing those bindings, confirm whether backups, manual `psql`, Studio-side tools, or external automation use host ports instead of `docker exec`, SSH tunneling, or internal DNS.
+- If `ants-ai-gateway` currently points to a host-published database port instead of the Docker service name, removing the host binding can break it until its connection string is corrected.
+- Putting a reverse proxy in front of Kong changes the effective external URL surface. OAuth callbacks, JWT issuer assumptions, CORS origins, and generated links can all regress if URLs are switched in the wrong order.
+- Restarting Kong or proxy layers without a smoke test can produce a false sense of success while Studio, Auth, or REST routes silently fail.
+
+### Cautions before making the change live
+
+- Do not combine all hardening steps into one maintenance window. Start with the smallest reversible network change.
+- Export the current compose files and environment state before edits so rollback is fast and exact.
+- Capture a pre-change snapshot:
+
+```bash
+docker compose ps
+docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
+ss -ltnp | egrep '(:5432|:6543|:8000|:8010|:8443|:443|:80)'
+```
+
+- After removing port publications, run a focused smoke test before touching proxy settings:
+
+```bash
+docker compose ps
+docker compose logs --tail=50 supabase-pooler
+docker compose logs --tail=50 supabase-kong
+curl -I http://127.0.0.1:8000/rest/v1/
+```
+
+- Keep rollback simple:
+  - restore the prior compose file
+  - run `docker compose up -d`
+  - verify the old listeners return
+
+### Practical recommendation
+
+The next live change should be a narrow networking hardening pass:
+
+1. Remove public `5432` and `6543`.
+2. Verify all dependent containers still work on the Docker network.
+3. Decide whether `8010` is truly required externally.
+4. Schedule reverse proxy plus HTTPS as the next controlled change.
+
+That sequence gives ANTS the highest security gain for the lowest operational risk.
+
 ## References
 
 - [Supabase: Self-Hosting with Docker](https://supabase.com/docs/guides/self-hosting/docker)
