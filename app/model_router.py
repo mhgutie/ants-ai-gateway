@@ -5,7 +5,6 @@ from typing import Any
 from app.config import get_models_config, get_routing_rules
 from app.schemas import TaskType
 
-
 def list_models() -> dict:
     return get_models_config()
 

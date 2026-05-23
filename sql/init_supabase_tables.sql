@@ -119,7 +119,6 @@ create table if not exists workflow_runs (
     completed_at timestamptz,
     created_at timestamptz not null default now()
 );
-
 create table if not exists harness_results (
     id uuid primary key default gen_random_uuid(),
     task_id text,

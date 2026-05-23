@@ -66,6 +66,7 @@ def test_operational_tables_enable_rls_and_revoke_public_roles():
         "model_usage",
         "agent_runs",
         "tool_runs",
+        "workflow_runs",
         "harness_results",
         "artifacts",
         "knowledge_chunks",
