@@ -15,16 +15,17 @@ This review covers the ANTS self-hosted Supabase deployment guidance and the gat
 
 ## Direct VPS Access Status
 
-Direct SSH verification to `root@173.212.232.176` was attempted in batch mode and failed with:
+Runtime verification was later completed from an interactive VPS shell on May 23, 2026.
 
-```text
-Permission denied (publickey,password).
+Verified commands:
+
+```bash
+hostname
+pwd
+sudo ufw status verbose
+docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
+ss -ltnp | egrep '(:5432|:6543|:8000|:3000|:443|:80)'
 ```
-
-That means the findings below are split between:
-
-- Verified from repository and runbook state
-- Inferred risk where VPS runtime evidence could not be collected
 
 ## Security Findings
 
@@ -77,25 +78,60 @@ Recommendation:
 - Terminate TLS there and update `SITE_URL`, `API_EXTERNAL_URL`, and `SUPABASE_PUBLIC_URL` to HTTPS origins.
 - Avoid exposing Studio broadly on the public internet; prefer IP allowlisting, VPN, or SSH tunneling.
 
-### 5. Postgres exposure guidance is good, but runtime verification is still missing
+### 5. Supabase pooler is published on public interfaces
 
-Status: unknown at runtime
+Status: high risk
 
-The runbook clearly says not to expose `5432` publicly and to keep UFW limited to SSH during first install. This is good.
+Runtime verification showed:
 
-What could not be verified:
-- Actual UFW rules on the VPS
-- Whether Docker published any ports unexpectedly
-- Whether Postgres is reachable from the public network
+- `supabase-pooler` publishes `0.0.0.0:5432->5432/tcp`
+- `supabase-pooler` publishes `0.0.0.0:6543->6543/tcp`
+- `ss -ltnp` confirms listeners on `0.0.0.0:5432`, `0.0.0.0:6543`, `[::]:5432`, and `[::]:6543`
+
+UFW currently contains `DENY IN` rules for `5432/tcp` and `6543/tcp`, which is better than leaving them openly allowed, but this is still not the desired production posture.
+
+Why this matters:
+- The runbook explicitly says not to expose Postgres publicly.
+- Docker-published ports add avoidable attack surface.
+- Depending on host firewall and Docker iptables behavior, relying on firewall rules instead of removing the port publication is a weaker control.
 
 Recommendation:
-- Verify on the VPS:
-  - `sudo ufw status verbose`
-  - `docker ps --format '{{.Names}}\t{{.Ports}}'`
-  - `ss -ltnp | egrep '(:5432|:6543|:8000|:3000|:443|:80)'`
-- Confirm that `5432` is bound only to localhost or an internal Docker network.
+- Remove published `5432` and `6543` bindings from the Supabase pooler unless they are strictly required externally.
+- Keep database access on the Docker network only.
+- Re-test with `docker ps` and `ss -ltnp` until neither port is published on `0.0.0.0` or `[::]`.
 
-### 6. Legacy-style JWT/API key handling should be reviewed against the newer self-hosted auth guidance
+### 6. Kong is public on port 8000 and 8443 is also published
+
+Status: medium risk now, high if left unmanaged in production
+
+Runtime verification showed:
+
+- `supabase-kong` publishes `0.0.0.0:8000->8000/tcp`
+- `supabase-kong` publishes `0.0.0.0:8443->8443/tcp`
+- UFW allows `8000/tcp` and denies `8443/tcp`
+
+This is acceptable for a controlled setup phase, but not yet a hardened production shape.
+
+Recommendation:
+- Put Kong behind a reverse proxy with HTTPS and restrict direct public exposure where possible.
+- If `8443` is not needed directly, stop publishing it.
+
+### 7. ANTS gateway is also published on 0.0.0.0:8010
+
+Status: medium risk
+
+Runtime verification showed:
+
+- `ants-ai-gateway` publishes `0.0.0.0:8010->8000/tcp`
+- `ss -ltnp` confirms a listener on `0.0.0.0:8010`
+
+UFW output did not include an explicit allow rule for `8010`, but the container is still bound to all interfaces.
+
+Recommendation:
+- If the gateway is meant to be consumed only behind Kong, reverse proxy, or an internal network, stop publishing `8010` publicly.
+- Prefer Docker-network-only exposure or bind to localhost while testing.
+
+### 8. Legacy-style JWT/API key handling should be reviewed against the newer self-hosted auth guidance
 
 Status: review recommended
 
@@ -105,7 +141,7 @@ Recommendation:
 - Review the current self-hosted auth key documentation before the next VPS hardening pass.
 - If the deployed stack supports the newer key flow cleanly, plan a controlled migration instead of carrying legacy key handling forward indefinitely.
 
-### 7. Default self-hosted stack should be kept lean
+### 9. Default self-hosted stack should be kept lean
 
 Status: optimization and attack-surface recommendation
 
@@ -115,7 +151,22 @@ Recommendation:
 - If ANTS does not actively use self-hosted analytics or vector on this VPS, keep them disabled.
 - Prefer the lean base stack and add overlays only for services that are truly needed.
 
-### 8. Backup strategy exists, but restore verification is still missing
+### 10. Realtime is unhealthy
+
+Status: operational risk
+
+Runtime verification showed:
+
+- `realtime-dev.supabase-realtime` has status `Up 36 hours (unhealthy)`
+
+This is not an immediate perimeter exposure issue by itself, but unhealthy infra often causes teams to disable controls or make rushed config changes later.
+
+Recommendation:
+- Inspect `docker compose logs realtime-dev.supabase-realtime`
+- Confirm whether Realtime is required at all for ANTS right now.
+- If it is not required, consider disabling it until needed.
+
+### 11. Backup strategy exists, but restore verification is still missing
 
 Status: medium risk
 
@@ -144,12 +195,13 @@ docker compose exec db psql -U postgres -d postgres -c "\dp"
 
 ## Recommended Priority Order
 
-1. Verify the VPS is not exposing Postgres, Studio, or unintended ports publicly.
-2. Put Kong behind HTTPS with a reverse proxy if the instance is internet-facing.
-3. Move production secrets out of plain `.env`.
-4. Add a restore-tested backup procedure.
-5. Consider moving ANTS operational tables out of `public` into a private schema.
-6. Re-check self-hosted auth key guidance against the current Supabase docs before the next rollout.
+1. Remove public `5432` and `6543` publication from the Supabase pooler.
+2. Decide whether `8010` should be public at all; if not, stop publishing the gateway directly.
+3. Put Kong behind HTTPS with a reverse proxy if the instance is internet-facing.
+4. Move production secrets out of plain `.env`.
+5. Add a restore-tested backup procedure.
+6. Consider moving ANTS operational tables out of `public` into a private schema.
+7. Re-check self-hosted auth key guidance against the current Supabase docs before the next rollout.
 
 ## References
 
