@@ -1,0 +1,155 @@
+policy_version: "2026-05-22"
+
+defaults:
+  # Never rotate profiles to bypass rate limits. Use backoff, queues, batch mode,
+  # model fallback, or explicit provider/tier upgrades instead.
+  rate_limit_statuses:
+    - 429
+  profile_fallback_statuses:
+    - 401
+    - 403
+  safe_rate_limit_action: backoff_or_queue
+  allow_profile_rotation_on_rate_limit: false
+  notes: "Provider profiles are for family budget separation and missing/invalid credential fallback, not limit circumvention."
+
+providers:
+  anthropic:
+    aliases:
+      - claude
+    source:
+      - https://docs.anthropic.com/en/api/rate-limits
+    rate_limit_scope: organization_and_workspace
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses:
+      - 402
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: honor_retry_after_backoff_queue_or_request_higher_limits
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Anthropic limits are organization-level with optional workspace limits. 429 includes retry-after; do not rotate Claude profiles to bypass it."
+
+  deepseek:
+    source:
+      - https://api-docs.deepseek.com/quick_start/error_codes
+    rate_limit_scope: account_and_dynamic_server_load
+    profile_fallback_statuses:
+      - 401
+      - 402
+      - 403
+    balance_or_spend_exhausted_statuses:
+      - 402
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_queue_reduce_concurrency_or_switch_model_provider
+    allow_profile_rotation_on_rate_limit: false
+    notes: "DeepSeek documents 402 as insufficient balance and 429 as requests too quickly."
+
+  kimi:
+    aliases:
+      - moonshot
+    source:
+      - https://platform.moonshot.ai/docs/overview
+      - https://www.kimi.com/help/kimi-api/api-balance-and-usage
+    rate_limit_scope: moonshot_account_and_model
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses:
+      - 402
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_queue_or_check_balance_before_next_profile
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Kimi/Moonshot has account balance endpoints. Treat 429 as pacing, not profile rotation."
+
+  ollama_cloud:
+    aliases:
+      - ollama
+    source:
+      - https://docs.ollama.com/api/authentication
+      - https://ollama.com/terms
+    rate_limit_scope: cloud_account
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses: []
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: cloud_backoff_queue_or_reduce_concurrency
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Ollama Cloud requires account/API-key auth; public docs are less explicit about limit semantics, so treat 429 conservatively."
+
+  ollama_local:
+    source:
+      - https://docs.ollama.com/api/authentication
+    rate_limit_scope: local_cpu_gpu_ram_concurrency
+    profile_fallback_statuses: []
+    balance_or_spend_exhausted_statuses: []
+    rate_limit_statuses:
+      - 429
+      - 503
+    safe_rate_limit_action: local_queue_concurrency_limit_model_unload_or_smaller_model
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Local Ollama normally has no auth; profiles do not matter. Capacity errors should be handled by local queue/concurrency controls."
+
+  openrouter:
+    source:
+      - https://openrouter.ai/docs/api/reference/limits
+    rate_limit_scope: global_capacity_and_model_dependent
+    profile_fallback_statuses:
+      - 401
+      - 402
+      - 403
+    balance_or_spend_exhausted_statuses:
+      - 402
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_or_switch_model
+    allow_profile_rotation_on_rate_limit: false
+    notes: "OpenRouter states extra accounts or API keys do not affect rate limits. Use /api/v1/key for credits and limits."
+
+  google:
+    source:
+      - https://ai.google.dev/gemini-api/docs/rate-limits
+    rate_limit_scope: project_not_api_key
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses: []
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_queue_batch_or_upgrade_project_tier
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Gemini rate limits are per project, not per API key."
+
+  qwen:
+    source:
+      - https://www.alibabacloud.com/help/en/model-studio/rate-limit
+    rate_limit_scope: alibaba_cloud_account_workspace_and_model
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses: []
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_queue_batch_or_request_limit_increase
+    allow_profile_rotation_on_rate_limit: false
+    notes: "Treat Qwen/Model Studio profiles as budget/accounts, not as rate-limit bypass."
+
+  openai:
+    source:
+      - https://platform.openai.com/docs/guides/rate-limits/what-are-the-rate-limits-for-our-ap
+      - https://openai.com/policies/terms-of-use
+    rate_limit_scope: organization_and_project
+    profile_fallback_statuses:
+      - 401
+      - 403
+    balance_or_spend_exhausted_statuses:
+      - 402
+    rate_limit_statuses:
+      - 429
+    safe_rate_limit_action: backoff_queue_batch_or_upgrade_limits
+    allow_profile_rotation_on_rate_limit: false
+    notes: "OpenAI rate limits are org/project level; terms prohibit circumventing limits."

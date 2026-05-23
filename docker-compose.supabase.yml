@@ -1,0 +1,10 @@
+services:
+  ants-ai-gateway:
+    networks:
+      - default
+      - supabase
+
+networks:
+  supabase:
+    external: true
+    name: ${ANTS_SUPABASE_DOCKER_NETWORK:-supabase_default}

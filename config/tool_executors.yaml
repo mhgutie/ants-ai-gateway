@@ -1,0 +1,58 @@
+policy_version: "2026-05-22"
+
+defaults:
+  requires_spec: true
+  requires_harness: true
+  log_tool_runs: true
+  sanitize_secrets: true
+  block_destructive_commands: true
+  execution_mode: guarded
+
+executors:
+  codex:
+    enabled_env: CODEX_EXECUTOR_ENABLED
+    role: repository_executor
+    auth_mode_env: CODEX_AUTH_MODE
+    auth_mode_default: chatgpt
+    credential_storage: external_codex_auth_store
+    cli_path_env: CODEX_CLI_PATH
+    workspace_root_env: CODEX_WORKSPACE_ROOT
+    allowed_roots_env: CODEX_ALLOWED_ROOTS
+    requires_spec: true
+    requires_harness: true
+    requires_pull_request_for_main: true
+    allow_browser: false
+    allow_shell: true
+    notes: "Codex should manage its own auth through official Codex login/session mechanisms. Do not store Codex OAuth access_token, refresh_token, or id_token in the gateway .env."
+
+  claude_code:
+    enabled_env: CLAUDE_CODE_EXECUTOR_ENABLED
+    role: coding_subprocess_executor
+    auth_mode_env: CLAUDE_CODE_AUTH_MODE
+    auth_mode_default: api_key_or_official_login
+    credential_storage: external_claude_code_auth_store
+    cli_path_env: CLAUDE_CODE_CLI_PATH
+    workspace_root_env: CLAUDE_CODE_WORKSPACE_ROOT
+    allowed_roots_env: CLAUDE_CODE_ALLOWED_ROOTS
+    requires_spec: true
+    requires_harness: true
+    allow_browser: false
+    allow_shell: true
+    notes: "Claude Code may be used as a specialized coding subprocess when installed and authenticated separately."
+
+  antigravity:
+    enabled_env: ANTIGRAVITY_EXECUTOR_ENABLED
+    role: live_environment_executor
+    auth_mode_env: ANTIGRAVITY_AUTH_MODE
+    auth_mode_default: official_cli_or_connector
+    credential_storage: external_antigravity_auth_store
+    cli_path_env: ANTIGRAVITY_CLI_PATH
+    workspace_root_env: ANTIGRAVITY_WORKSPACE_ROOT
+    allowed_roots_env: ANTIGRAVITY_ALLOWED_ROOTS
+    requires_spec: true
+    requires_harness: true
+    requires_approval_for_shell: true
+    requires_approval_for_browser: true
+    allow_browser: true
+    allow_shell: true
+    notes: "Antigravity should be enabled only after CLI/SDK/connector installation and a smoke test in the target environment."
