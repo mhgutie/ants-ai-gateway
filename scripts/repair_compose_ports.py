@@ -78,9 +78,11 @@ def main():
             while j >= 0 and after_p2[j].strip() == "":
                 j -= 1
             if j < 0 or after_p2[j].strip() != "ports:":
-                indent = len(line) - len(line.lstrip())
-                after_p2.append(" " * indent + "ports:\n")
-                print(f"  Restored 'ports:' key before line {i+1}")
+                list_indent = len(line) - len(line.lstrip())
+                # ports: sits 2 spaces left of its list items in Docker Compose YAML
+                ports_indent = max(0, list_indent - 2)
+                after_p2.append(" " * ports_indent + "ports:\n")
+                print(f"  Restored 'ports:' key (indent={ports_indent}) before line {i+1}")
                 restored += 1
         after_p2.append(line)
         i += 1

@@ -237,7 +237,10 @@ def gql(query: str, variables: dict, api_key: str) -> dict:
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        result = json.loads(resp.read())
+    if "errors" in result:
+        raise RuntimeError(f"GraphQL errors: {result['errors']}")
+    return result
 
 
 def list_teams(api_key: str):

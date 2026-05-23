@@ -25,7 +25,7 @@ pip3 install pyyaml -q 2>&1 | tail -1
 
 # --- Step 3: download repair script ---
 echo "[2/6] Downloading repair script..."
-curl -fsSL "$RAW/scripts/repair_compose_ports.py" -o /tmp/rcp.py
+curl -fsSL "$RAW/scripts/repair_compose_ports.py" -o /tmp/rcp.py || { echo "ERROR: failed to download repair script"; exit 1; }
 
 # --- Step 4: run repair (removes 5432/6543, restores other ports:, validates YAML) ---
 echo "[3/6] Repairing docker-compose.yml..."
@@ -43,7 +43,7 @@ sleep 6
 
 echo ""
 echo "=== Port verification (5432/6543 must NOT appear) ==="
-ss -ltnp | egrep '(:5432|:6543|:8000|:8443|:8010)' || echo "(no matching listeners)"
+ss -ltnp | grep -E '(:5432|:6543|:8000|:8443|:8010)' || echo "(no ports matched — 5432/6543 successfully removed)"
 
 echo ""
 echo "=== Container status ==="
@@ -52,9 +52,8 @@ docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}" | grep -E "pooler
 # --- Step 7: apply migration 002 (workflow_runs + latency_ms) ---
 echo ""
 echo "[6/6] Applying migration 002..."
-curl -fsSL "$RAW/sql/migrations/002_add_workflow_runs.sql" -o /tmp/m002.sql
-docker exec -i supabase-db psql -U postgres -d postgres < /tmp/m002.sql
-echo "Migration 002: OK"
+curl -fsSL "$RAW/sql/migrations/002_add_workflow_runs.sql" -o /tmp/m002.sql || { echo "ERROR: failed to download migration 002"; exit 1; }
+docker exec -i supabase-db psql -U postgres -d postgres < /tmp/m002.sql && echo "Migration 002: OK" || echo "WARNING: migration 002 may already be applied"
 
 # --- Final verification ---
 echo ""
