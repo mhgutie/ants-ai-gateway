@@ -91,6 +91,16 @@ docker compose up --build
 
 The API will be available at `http://localhost:8000`.
 
+## Operator Frontend
+
+The gateway serves a lightweight operator console at:
+
+```text
+http://localhost:8000/ui
+```
+
+Use it to inspect health, Supabase dependency status, credential-pool status, model routing, executor policy, executor sessions, preflight decisions, and executor smoke tests. Protected calls use the existing `X-ANTS-API-Key` header. The browser stores the API base URL and gateway key in local storage for operator convenience; do not use shared browsers for production keys.
+
 On the VPS, Supabase already uses port `8000`, so run the gateway on `8010`:
 
 ```env

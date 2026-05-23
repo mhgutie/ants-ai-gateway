@@ -13,6 +13,7 @@ Linear issue or traceable record:
 - [ ] `pytest`
 - [ ] Relevant smoke test or harness evidence attached
 - [ ] Secrets scan / manual secret review completed
+- [ ] Deployment, rollback, or operator evidence attached when infrastructure behavior changes
 
 ## CodeRabbit
 
@@ -22,5 +23,9 @@ Linear issue or traceable record:
 ## Risks
 
 
-## Notes
+## Rollback / Follow-Up
 
+- Rollback path:
+- Deferred follow-ups:
+
+## Notes

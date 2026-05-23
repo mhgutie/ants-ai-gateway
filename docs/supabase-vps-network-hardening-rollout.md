@@ -103,6 +103,16 @@ Expected results:
 - Kong still responds locally on `127.0.0.1:8000`
 - Supabase containers stay healthy enough for current ANTS usage
 
+Capture sanitized evidence for Linear, GitHub, and CodeRabbit review:
+
+```bash
+ANTS_GATEWAY_API_KEY="$(grep '^ANTS_GATEWAY_API_KEY=' /path/to/ants-ai-gateway/.env | cut -d= -f2-)" \
+ANTS_GATEWAY_URL="http://127.0.0.1:8010" \
+bash scripts/collect_ant12_vps_evidence.sh > ant12-vps-evidence.md
+```
+
+Attach the resulting markdown to the PR or paste its key verdicts into the PR validation section. Do not include `.env` contents, provider keys, database passwords, or raw credential files.
+
 ## Gateway Exposure Decision
 
 After `5432/6543` are removed, decide whether `8010` is truly required externally.

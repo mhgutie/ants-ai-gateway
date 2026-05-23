@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.auth import require_gateway_api_key
 from app.config import get_settings
@@ -37,6 +40,14 @@ from app.executor_smoke import run_executor_smoke
 from app.tool_executors import list_executor_sessions, list_tool_executor_statuses
 
 app = FastAPI(title="ANTS AI Gateway", version="0.1.0")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+app.mount("/ui/assets", StaticFiles(directory=STATIC_DIR), name="ants-ui-assets")
+
+
+@app.get("/ui", include_in_schema=False)
+async def operator_ui() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")

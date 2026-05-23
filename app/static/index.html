@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ANTS Gateway</title>
+    <link rel="stylesheet" href="/ui/assets/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">ANTS AI Gateway</p>
+          <h1>Operator Console</h1>
+        </div>
+        <form id="settings-form" class="settings">
+          <label>
+            API URL
+            <input id="api-base" name="api-base" type="url" value="" placeholder="http://localhost:8000" />
+          </label>
+          <label>
+            Gateway key
+            <input id="api-key" name="api-key" type="password" autocomplete="off" placeholder="X-ANTS-API-Key" />
+          </label>
+          <button type="submit">Save</button>
+        </form>
+      </section>
+
+      <section class="status-grid">
+        <article class="panel compact">
+          <div class="panel-head">
+            <h2>Health</h2>
+            <button data-action="health">Refresh</button>
+          </div>
+          <pre id="health-output" class="output">Waiting for refresh.</pre>
+        </article>
+        <article class="panel compact">
+          <div class="panel-head">
+            <h2>Dependencies</h2>
+            <button data-action="dependencies">Refresh</button>
+          </div>
+          <pre id="dependencies-output" class="output">Requires gateway key.</pre>
+        </article>
+        <article class="panel compact">
+          <div class="panel-head">
+            <h2>Credentials</h2>
+            <button data-action="credentials">Refresh</button>
+          </div>
+          <pre id="credentials-output" class="output">Requires gateway key.</pre>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <nav class="tabs" aria-label="Operator views">
+          <button class="tab active" data-tab="preflight">Preflight</button>
+          <button class="tab" data-tab="models">Models</button>
+          <button class="tab" data-tab="executors">Executors</button>
+          <button class="tab" data-tab="sessions">Sessions</button>
+          <button class="tab" data-tab="smoke">Smoke Test</button>
+        </nav>
+
+        <article id="tab-preflight" class="panel tab-panel active">
+          <div class="panel-head">
+            <h2>Preflight</h2>
+            <button id="run-preflight" type="button">Run</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              Task ID
+              <input id="task-id" value="ants-ui-preflight" />
+            </label>
+            <label>
+              Task Type
+              <select id="task-type"></select>
+            </label>
+            <label>
+              Context Scope
+              <select id="context-scope">
+                <option value="limited">limited</option>
+                <option value="selected_files">selected_files</option>
+                <option value="full_repo">full_repo</option>
+              </select>
+            </label>
+            <label class="checkbox">
+              <input id="explicitly-authorized" type="checkbox" />
+              Explicitly authorized
+            </label>
+          </div>
+          <label class="stacked">
+            User request
+            <textarea id="user-request" rows="6">Review this ANTS task and estimate the safest model route.</textarea>
+          </label>
+          <pre id="preflight-output" class="output tall">Ready.</pre>
+        </article>
+
+        <article id="tab-models" class="panel tab-panel">
+          <div class="panel-head">
+            <h2>Models</h2>
+            <button data-action="models">Refresh</button>
+          </div>
+          <div id="models-table" class="table-wrap"></div>
+          <pre id="models-output" class="output collapsed"></pre>
+        </article>
+
+        <article id="tab-executors" class="panel tab-panel">
+          <div class="panel-head">
+            <h2>Executors</h2>
+            <button data-action="executors">Refresh</button>
+          </div>
+          <div id="executors-table" class="table-wrap"></div>
+          <pre id="executors-output" class="output collapsed"></pre>
+        </article>
+
+        <article id="tab-sessions" class="panel tab-panel">
+          <div class="panel-head">
+            <h2>Sessions</h2>
+            <button data-action="sessions">Refresh</button>
+          </div>
+          <div id="sessions-table" class="table-wrap"></div>
+          <pre id="sessions-output" class="output collapsed"></pre>
+        </article>
+
+        <article id="tab-smoke" class="panel tab-panel">
+          <div class="panel-head">
+            <h2>Executor Smoke Test</h2>
+            <button id="run-smoke" type="button">Run</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              Executor
+              <select id="smoke-executor">
+                <option value="codex">codex</option>
+                <option value="claude_code">claude_code</option>
+                <option value="antigravity">antigravity</option>
+              </select>
+            </label>
+            <label>
+              Mode
+              <select id="smoke-mode">
+                <option value="version">version</option>
+                <option value="prompt">prompt</option>
+              </select>
+            </label>
+            <label>
+              Timeout seconds
+              <input id="smoke-timeout" type="number" min="5" max="120" value="30" />
+            </label>
+          </div>
+          <pre id="smoke-output" class="output tall">Ready.</pre>
+        </article>
+      </section>
+    </main>
+    <script src="/ui/assets/app.js" defer></script>
+  </body>
+</html>

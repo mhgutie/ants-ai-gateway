@@ -33,6 +33,21 @@ def test_direct_provider_smoke_script_targets_deepseek_and_kimi():
     assert '"model":"kimi-k2.6"' in script
 
 
+def test_ant12_evidence_script_collects_required_checks_without_secret_echoes():
+    script = Path("scripts/collect_ant12_vps_evidence.sh").read_text()
+
+    assert "check_no_public_db_ports" in script
+    assert "0\\.0\\.0\\.0" in script
+    assert ":5432|:6543" in script
+    assert "/health" in script
+    assert "/dependencies" in script
+    assert "X-ANTS-API-Key" in script
+    assert "docker compose logs --tail=30 supabase-pooler" in script
+    assert "docker compose logs --tail=30 supabase-kong" in script
+    assert "printenv" not in script
+    assert "env |" not in script
+
+
 @pytest.mark.parametrize(
     ("script_name", "env_text"),
     [
