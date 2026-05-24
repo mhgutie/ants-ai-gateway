@@ -48,6 +48,50 @@ def test_ant12_evidence_script_collects_required_checks_without_secret_echoes():
     assert "env |" not in script
 
 
+def test_repair_compose_ports_removes_env_mapped_pooler_ports(tmp_path):
+    compose = tmp_path / "docker-compose.yml"
+    compose.write_text(
+        """
+services:
+  kong:
+    image: kong
+    ports:
+      - ${KONG_HTTP_PORT}:8000/tcp
+      - ${KONG_HTTPS_PORT}:8443/tcp
+  supavisor:
+    image: supabase/supavisor
+    ports:
+      - ${POSTGRES_PORT}:5432
+      - ${POOLER_PROXY_PORT_TRANSACTION}:6543
+    environment:
+      SUPABASE_URL: http://kong:8000
+""".lstrip()
+    )
+
+    result = subprocess.run(
+        ["python", "scripts/repair_compose_ports.py", "--file", str(compose)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    text = compose.read_text()
+    assert "${POSTGRES_PORT}:5432" not in text
+    assert "${POOLER_PROXY_PORT_TRANSACTION}:6543" not in text
+    assert "${KONG_HTTP_PORT}:8000/tcp" in text
+    assert "SUPABASE_URL: http://kong:8000" in text
+
+
+def test_vps_harden_script_uses_actual_supavisor_service_name():
+    script = Path("scripts/vps_harden_and_migrate.sh").read_text()
+
+    assert 'grep -qx "supavisor"' in script
+    assert "docker compose up -d supavisor" in script
+    assert "docker compose up -d supabase-pooler" in script
+    assert "python3 -m pip install" not in script
+
+
 @pytest.mark.parametrize(
     ("script_name", "env_text"),
     [

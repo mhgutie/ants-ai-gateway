@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """
-Repair docker-compose.yml after sed removed ports: keys,
-then remove 5432/6543 port publications (ANT-12 hardening).
+Remove public 5432/6543 port publications from docker-compose.yml.
 
 Usage:
   python3 repair_compose_ports.py --file /path/to/docker-compose.yml [--dry-run]
 
 What it does:
-  1. Restores missing 'ports:' keys before orphaned port-mapping list items.
-  2. Removes 5432 and 6543 port mappings (hardening goal).
-  3. Removes now-empty 'ports:' blocks.
+  1. Removes 5432 and 6543 port mappings, including ${VAR}:5432 style lines.
+  2. Removes now-empty 'ports:' blocks.
+  3. Collapses accidental duplicate 'ports:' keys.
   4. Validates the result is parseable YAML.
 """
 
-import re
-import sys
-import shutil
 import argparse
+import re
+import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -27,19 +26,12 @@ except ImportError:
     sys.exit(1)
 
 
-# Matches numeric-only port mappings for pass 1 (harden: capture port to check against HARDEN_PORTS)
-NUMERIC_PORT_RE = re.compile(r'^-\s+["\']?[\d.]*:?(\d+):\d+(?:/\w+)?["\']?\s*$')
-# Matches any Docker port-mapping list item including ${VAR}:port/proto style for pass 2 (restore ports: key)
-ANY_PORT_RE = re.compile(
-    r'^-\s+["\']?'
-    r'(?:[\d.]+:)?'              # optional host IP
-    r'(?:\$\{[^}]+\}|\d+)'      # host port: ${VAR} or digits
-    r':'
-    r'(?:\$\{[^}]+\}|\d+)'      # container port: ${VAR} or digits
-    r'(?:/\w+)?'                 # optional /tcp /udp
-    r'["\']?\s*$'
+PORT_MAPPING_RE = re.compile(
+    r"""^\s*-\s+["']?"""
+    r"""(?P<mapping>(?:[\d.]+:)?(?:\$\{[^}]+\}|\d+):(?:\$\{[^}]+\}|\d+)(?:/\w+)?)"""
+    r"""["']?\s*$"""
 )
-HARDEN_PORTS = {5432, 6543}
+HARDEN_PORTS = {"5432", "6543"}
 
 
 def parse_args():
@@ -47,6 +39,63 @@ def parse_args():
     p.add_argument("--file", default="docker-compose.yml")
     p.add_argument("--dry-run", action="store_true")
     return p.parse_args()
+
+
+def _is_hardened_port_mapping(line: str) -> bool:
+    match = PORT_MAPPING_RE.match(line)
+    if not match:
+        return False
+    mapping = match.group("mapping")
+    parts = mapping.split(":")
+    host_port = parts[-2] if len(parts) >= 2 else ""
+    container_port = parts[-1].split("/")[0]
+    return host_port in HARDEN_PORTS or container_port in HARDEN_PORTS
+
+
+def _collapse_duplicate_ports_keys(lines: list[str]) -> tuple[list[str], int]:
+    result = []
+    previous_nonempty_ports_indent: int | None = None
+    collapsed = 0
+    for line in lines:
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
+        if stripped == "ports:":
+            if previous_nonempty_ports_indent == indent:
+                collapsed += 1
+                continue
+            previous_nonempty_ports_indent = indent
+            result.append(line)
+            continue
+
+        if stripped and not stripped.startswith("-"):
+            previous_nonempty_ports_indent = None
+        result.append(line)
+    return result, collapsed
+
+
+def _remove_empty_ports_blocks(lines: list[str]) -> tuple[list[str], int]:
+    result = []
+    removed = 0
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "ports:":
+            indent = len(line) - len(line.lstrip())
+            j = i + 1
+            while j < len(lines) and lines[j].strip() == "":
+                j += 1
+            if j >= len(lines):
+                removed += 1
+                i += 1
+                continue
+            next_indent = len(lines[j]) - len(lines[j].lstrip())
+            if not lines[j].lstrip().startswith("-") or next_indent <= indent:
+                removed += 1
+                i += 1
+                continue
+        result.append(line)
+        i += 1
+    return result, removed
 
 
 def main():
@@ -60,62 +109,23 @@ def main():
     lines = path.read_text().splitlines(keepends=True)
     print(f"Read {len(lines)} lines from {path}")
 
-    # Pass 1: remove 5432/6543 port mapping lines (numeric ports only)
+    # Pass 1: remove 5432/6543 port mapping lines.
     removed_ports = []
     after_p1 = []
-    for i, line in enumerate(lines):
-        m = NUMERIC_PORT_RE.match(line.strip())
-        if m:
-            port = int(m.group(1))
-            if port in HARDEN_PORTS:
-                removed_ports.append((i + 1, line.rstrip()))
-                continue
+    for i, line in enumerate(lines, 1):
+        if _is_hardened_port_mapping(line):
+            removed_ports.append((i, line.rstrip()))
+            continue
         after_p1.append(line)
 
     print(f"Pass 1: removed {len(removed_ports)} port-mapping lines:")
     for lineno, content in removed_ports:
         print(f"  line {lineno}: {content}")
 
-    # Pass 2: restore missing 'ports:' key before orphaned port-mapping items
-    after_p2 = []
-    restored = 0
-    i = 0
-    while i < len(after_p1):
-        line = after_p1[i]
-        stripped = line.strip()
-        if ANY_PORT_RE.match(stripped):
-            # Check if previous non-empty line already has 'ports:'
-            j = len(after_p2) - 1
-            while j >= 0 and after_p2[j].strip() == "":
-                j -= 1
-            if j < 0 or after_p2[j].strip() != "ports:":
-                list_indent = len(line) - len(line.lstrip())
-                # ports: sits 2 spaces left of its list items in Docker Compose YAML
-                ports_indent = max(0, list_indent - 2)
-                after_p2.append(" " * ports_indent + "ports:\n")
-                print(f"  Restored 'ports:' key (indent={ports_indent}) before line {i+1}")
-                restored += 1
-        after_p2.append(line)
-        i += 1
-    print(f"Pass 2: restored {restored} 'ports:' keys")
+    after_p2, collapsed = _collapse_duplicate_ports_keys(after_p1)
+    print(f"Pass 2: collapsed {collapsed} duplicate 'ports:' keys")
 
-    # Pass 3: remove empty 'ports:' blocks (ports: followed by no list items)
-    after_p3 = []
-    removed_empty = 0
-    i = 0
-    while i < len(after_p2):
-        line = after_p2[i]
-        if line.strip() == "ports:":
-            # Look ahead for the next non-empty line
-            j = i + 1
-            while j < len(after_p2) and after_p2[j].strip() == "":
-                j += 1
-            if j >= len(after_p2) or not after_p2[j].strip().startswith("-"):
-                removed_empty += 1
-                i += 1
-                continue
-        after_p3.append(line)
-        i += 1
+    after_p3, removed_empty = _remove_empty_ports_blocks(after_p2)
     print(f"Pass 3: removed {removed_empty} empty 'ports:' blocks")
 
     result = "".join(after_p3)

@@ -19,15 +19,12 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 
-# --- Step 2: install pyyaml ---
-echo "[1/6] Installing pyyaml..."
-if command -v pip3 &>/dev/null; then
-  pip3 install pyyaml -q 2>&1 | tail -1
-elif command -v pip &>/dev/null; then
-  pip install pyyaml -q 2>&1 | tail -1
-else
-  python3 -m pip install pyyaml -q 2>&1 | tail -1
-fi
+# --- Step 2: verify pyyaml ---
+echo "[1/6] Verifying pyyaml..."
+python3 - <<'PY'
+import yaml
+print("pyyaml: OK")
+PY
 
 # --- Step 3: download repair script ---
 echo "[2/6] Downloading repair script..."
@@ -43,8 +40,15 @@ echo "[4/6] Validating YAML..."
 docker compose config --quiet && echo "YAML: OK"
 
 # --- Step 6: restart pooler without the public 5432/6543 ports ---
-echo "[5/6] Restarting supabase-pooler..."
-docker compose up -d supabase-pooler
+echo "[5/6] Restarting Supabase pooler service..."
+if docker compose config --services | grep -qx "supavisor"; then
+  docker compose up -d supavisor
+elif docker compose config --services | grep -qx "supabase-pooler"; then
+  docker compose up -d supabase-pooler
+else
+  echo "Pooler service name not found; applying full compose update."
+  docker compose up -d
+fi
 sleep 6
 
 echo ""
