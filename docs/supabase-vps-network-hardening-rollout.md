@@ -128,6 +128,19 @@ If it **is** required:
 - document why
 - ensure auth, logging, and rate limiting expectations are explicit
 
+### 2026-05-24 Decision
+
+`8010` is not required as a public listener for the current ANTS VPS setup. The gateway remains reachable locally at `http://127.0.0.1:8010` for same-host operators, scripts, and future reverse-proxy/TLS routing, but it is no longer published on `0.0.0.0` or `[::]`.
+
+Post-change evidence:
+
+- `curl http://127.0.0.1:8010/health` returned `{"status":"ok","service":"ants-ai-gateway","env":"local"}`.
+- `ss -ltnp` showed `127.0.0.1:8010` only for the gateway.
+- The gateway container showed `127.0.0.1:8010->8000/tcp`.
+- `5432` and `6543` remained absent from host listeners.
+
+External operator access should use an SSH tunnel or a future authenticated reverse proxy with TLS.
+
 ## Rollback
 
 If any internal dependency breaks:
