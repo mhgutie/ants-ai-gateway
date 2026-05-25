@@ -33,6 +33,23 @@ def test_direct_provider_smoke_script_targets_deepseek_and_kimi():
     assert '"model":"kimi-k2.6"' in script
 
 
+def test_n8n_memory_contract_smoke_script_targets_all_memory_endpoints():
+    script = Path("scripts/smoke_n8n_memory_contract.sh").read_text()
+
+    assert "if [ ! -f .env" in script
+    assert 'if [ -z "${ANTS_KEY}" ]' in script
+    assert "--connect-timeout" in script
+    assert "--max-time" in script
+    assert "/n8n/workflow-runs" in script
+    assert "/n8n/artifacts" in script
+    assert "/n8n/handoffs" in script
+    assert "workflow_runs" in script
+    assert "artifacts" in script
+    assert "agent_handoffs" in script
+    assert "printenv" not in script
+    assert "\nenv |" not in script
+
+
 def test_ant12_evidence_script_collects_required_checks_without_secret_echoes():
     script = Path("scripts/collect_ant12_vps_evidence.sh").read_text()
 
@@ -97,6 +114,7 @@ def test_vps_harden_script_uses_actual_supavisor_service_name():
     [
         ("deploy_vps_supabase.sh", "ANTS_GATEWAY_PORT=8010\n"),
         ("smoke_direct_providers.sh", "ANTS_GATEWAY_PORT=8010\n"),
+        ("smoke_n8n_memory_contract.sh", "ANTS_GATEWAY_PORT=8010\n"),
     ],
 )
 def test_scripts_fail_cleanly_when_gateway_api_key_is_absent(tmp_path, script_name, env_text):

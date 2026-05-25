@@ -259,6 +259,14 @@ curl -X POST http://localhost:8010/n8n/handoffs \
 
 Do not send provider API keys, OAuth tokens, refresh tokens, database credentials, or raw `.env` contents in these payloads.
 
+After deploying the gateway, run the n8n memory contract smoke test:
+
+```bash
+bash scripts/smoke_n8n_memory_contract.sh
+```
+
+The script writes one synthetic workflow run, artifact, and handoff using only sanitized payloads.
+
 ## GitHub Repository Provisioning
 
 ANTS can prepare GitHub repositories through a protected gateway endpoint. Configure the token only at runtime:

@@ -91,3 +91,19 @@ Optional fields:
 
 - `tests/test_sql_schema.py`
 - `tests/test_n8n_contract.py`
+- `tests/test_deploy_scripts.py`
+
+## VPS Smoke
+
+Run:
+
+```bash
+bash scripts/smoke_n8n_memory_contract.sh
+```
+
+Expected result:
+
+- One row in `workflow_runs` with `workflow_name = 'ants-memory-contract-smoke'`.
+- One row in `artifacts` with `artifact_type = 'smoke_evidence'`.
+- One row in `agent_handoffs` with `source_agent = 'n8n'` and `target_agent = 'codex'`.
+- No provider API keys, OAuth tokens, refresh tokens, database credentials, or raw `.env` values in any payload.
