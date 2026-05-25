@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 
@@ -153,6 +154,70 @@ class UsageLogRequest(BaseModel):
 class UsageLogResponse(BaseModel):
     logged: bool
     run_id: str
+
+
+class WorkflowRunLogRequest(BaseModel):
+    project_id: str | None = None
+    task_id: str | None = None
+    run_id: str
+    workflow_name: str
+    workflow_version: str | None = None
+    n8n_workflow_id: str | None = None
+    n8n_execution_id: str | None = None
+    trigger_source: str | None = None
+    status: str
+    input_summary: dict[str, Any] = Field(default_factory=dict)
+    output_summary: dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+    latency_ms: int | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class WorkflowRunLogResponse(BaseModel):
+    logged: bool
+    run_id: str
+    workflow_name: str
+
+
+class ArtifactLogRequest(BaseModel):
+    project_id: str | None = None
+    task_id: str | None = None
+    run_id: str | None = None
+    artifact_type: str
+    name: str
+    uri: str
+    storage_provider: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactLogResponse(BaseModel):
+    logged: bool
+    name: str
+    uri: str
+
+
+class AgentHandoffLogRequest(BaseModel):
+    project_id: str | None = None
+    task_id: str | None = None
+    run_id: str
+    source_agent: str
+    target_agent: str
+    branch: str | None = None
+    status: str = "ready"
+    completed: list[str] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    artifact_links: list[dict[str, Any]] = Field(default_factory=list)
+    sanitized_context: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentHandoffLogResponse(BaseModel):
+    logged: bool
+    run_id: str
+    source_agent: str
+    target_agent: str
 
 
 class ToolExecutorStatus(BaseModel):

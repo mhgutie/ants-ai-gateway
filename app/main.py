@@ -22,6 +22,10 @@ from app.schemas import (
     ChatResponse,
     EstimateRequest,
     EstimateResponse,
+    AgentHandoffLogRequest,
+    AgentHandoffLogResponse,
+    ArtifactLogRequest,
+    ArtifactLogResponse,
     ExecutorCredentialPoolStatus,
     ExecutorSmokeRequest,
     ExecutorSmokeResponse,
@@ -31,6 +35,8 @@ from app.schemas import (
     PreflightRequest,
     PreflightResponse,
     ToolExecutorsResponse,
+    WorkflowRunLogRequest,
+    WorkflowRunLogResponse,
     UsageLogRequest,
     UsageLogResponse,
 )
@@ -46,6 +52,9 @@ from app.db_queries import (
     get_tasks,
     get_usage_logs,
     get_dashboard_stats,
+    log_agent_handoff,
+    log_artifact,
+    log_workflow_run,
 )
 
 app = FastAPI(title="ANTS AI Gateway", version="0.1.0")
@@ -243,6 +252,41 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def usage(request: UsageLogRequest) -> UsageLogResponse:
     logged = await log_usage(request)
     return UsageLogResponse(logged=logged, run_id=request.run_id)
+
+
+@app.post(
+    "/n8n/workflow-runs",
+    response_model=WorkflowRunLogResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def n8n_workflow_run(request: WorkflowRunLogRequest) -> WorkflowRunLogResponse:
+    logged = await log_workflow_run(request.model_dump())
+    return WorkflowRunLogResponse(logged=logged, run_id=request.run_id, workflow_name=request.workflow_name)
+
+
+@app.post(
+    "/n8n/artifacts",
+    response_model=ArtifactLogResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def n8n_artifact(request: ArtifactLogRequest) -> ArtifactLogResponse:
+    logged = await log_artifact(request.model_dump())
+    return ArtifactLogResponse(logged=logged, name=request.name, uri=request.uri)
+
+
+@app.post(
+    "/n8n/handoffs",
+    response_model=AgentHandoffLogResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def n8n_handoff(request: AgentHandoffLogRequest) -> AgentHandoffLogResponse:
+    logged = await log_agent_handoff(request.model_dump())
+    return AgentHandoffLogResponse(
+        logged=logged,
+        run_id=request.run_id,
+        source_agent=request.source_agent,
+        target_agent=request.target_agent,
+    )
 
 
 @app.get("/api/dashboard-stats", dependencies=[Depends(require_gateway_api_key)])

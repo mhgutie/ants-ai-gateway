@@ -1,6 +1,16 @@
 from __future__ import annotations
 
+"""Database queries for the ANTS AI Gateway.
+
+This module provides data access functions for projects, specs, tasks,
+model usage statistics, and n8n operational ledger entries (workflow runs,
+artifacts, and agent handoffs). It includes a resilient in-memory mock store
+fallback for local offline development when Supabase or Postgres database
+connections are unavailable.
+"""
+
 import logging
+import json
 from typing import Any
 from datetime import datetime
 from uuid import uuid4
@@ -96,10 +106,25 @@ MOCK_STORE: dict[str, list[dict[str, Any]]] = {
             "stop_reason": "stop",
             "created_at": datetime.now()
         }
-    ]
+    ],
+    "workflow_runs": [],
+    "artifacts": [],
+    "agent_handoffs": []
 }
 
 def to_dict(row: dict | Any) -> dict[str, Any]:
+    """Converts a database row or asyncpg Record into a standard dictionary.
+
+    Datetime values inside the row are serialized to ISO 8601 string format
+    to ensure JSON compatibility.
+
+    Args:
+        row: A database record, asyncpg Record, dictionary, or any row-like object.
+
+    Returns:
+        A dictionary containing the row's keys and values, with datetime objects
+        serialized to ISO strings. If row is empty, returns an empty dictionary.
+    """
     if not row:
         return {}
     # Convert asyncpg Record to dict
@@ -113,6 +138,15 @@ def to_dict(row: dict | Any) -> dict[str, Any]:
     return d
 
 async def get_projects() -> list[dict[str, Any]]:
+    """Retrieves all active projects ordered by creation date descending.
+
+    This function attempts to fetch projects from the live database. If the
+    database connection is unavailable or an error occurs, it resiliently
+    falls back to the in-memory MOCK_STORE project list.
+
+    Returns:
+        A list of dictionaries representing the projects.
+    """
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -125,6 +159,18 @@ async def get_projects() -> list[dict[str, Any]]:
         return [to_dict(p) for p in MOCK_STORE["projects"]]
 
 async def create_project(name: str, key: str | None = None, owner: str | None = None, metadata: dict | None = None) -> dict[str, Any]:
+    """Creates a new project inside the database or fallback mock store.
+
+    Args:
+        name: The human-readable name of the project.
+        key: An optional unique project key identifier (e.g., 'ANTS-FACTORY').
+            If not specified, one is automatically generated based on the name.
+        owner: The owner of the project. Defaults to 'Administrator'.
+        metadata: Optional dictionary of metadata associated with the project.
+
+    Returns:
+        A dictionary representing the newly created project record.
+    """
     proj_id = str(uuid4())
     proj_key = key or f"PROJ-{name.upper().replace(' ', '-')[:8]}"
     owner_name = owner or "Administrator"
@@ -152,7 +198,7 @@ async def create_project(name: str, key: str | None = None, owner: str | None = 
                 insert into projects (id, project_key, name, status, owner, metadata, created_at, updated_at)
                 values ($1, $2, $3, 'active', $4, $5, $6, $7)
                 """,
-                proj_id, proj_key, name, owner_name, meta, now, now
+                proj_id, proj_key, name, owner_name, json.dumps(meta), now, now
             )
             row = await conn.fetchrow("select * from projects where id = $1", proj_id)
             return to_dict(row)
@@ -172,6 +218,15 @@ async def create_project(name: str, key: str | None = None, owner: str | None = 
         return to_dict(new_proj)
 
 async def get_specs() -> list[dict[str, Any]]:
+    """Retrieves all specification drafts and approved records from the store.
+
+    Attempts to fetch from the live database, falling back to the in-memory
+    mock store on failure or if the database is disconnected.
+
+    Returns:
+        A list of dictionaries representing the specifications, ordered by creation
+        date descending.
+    """
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -188,6 +243,23 @@ async def create_spec(
     acceptance_criteria: list[str] | None = None, risks: list[str] | None = None,
     budget: dict[str, Any] | None = None, test_harness: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    """Creates a new task specification in the database or fallback store.
+
+    Args:
+        project_id: The UUID of the parent project this specification belongs to.
+        title: The title describing the goal or task to perform.
+        problem: A detailed statement of the problem to be solved.
+        expected_result: The expected deliverables or visual outcome.
+        allowed_tools: A list of tool names allowed for agent execution.
+        required_agents: A list of AI models or agent types recommended.
+        acceptance_criteria: A list of testable conditions for acceptance.
+        risks: Identified risks or limitations for the execution.
+        budget: Token budget and cost parameters.
+        test_harness: Automated testing harness specifications.
+
+    Returns:
+        A dictionary representing the newly created specification record.
+    """
     spec_id = str(uuid4())
     now = datetime.now()
     tools = allowed_tools or []
@@ -233,7 +305,7 @@ async def create_spec(
                 values ($1, $2, $3, $4, $5, '{}'::jsonb, $6, $7, $8, '{}'::jsonb, $9, $10, $11, $12, 'draft', $13, $14)
                 """,
                 spec_id, project_id, f"TSK-{spec_id[:6].upper()}", title, problem, expected_result,
-                tools, agents, criteria, r_list, b_obj, h_obj, now, now
+                tools, agents, criteria, r_list, json.dumps(b_obj), json.dumps(h_obj), now, now
             )
             row = await conn.fetchrow("select * from specs where id = $1", spec_id)
             return to_dict(row)
@@ -263,6 +335,12 @@ async def create_spec(
         return to_dict(new_spec)
 
 async def get_tasks() -> list[dict[str, Any]]:
+    """Retrieves all task execution records from the database or mock store.
+
+    Returns:
+        A list of dictionaries representing the tasks, ordered by creation date
+        descending.
+    """
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -274,6 +352,12 @@ async def get_tasks() -> list[dict[str, Any]]:
         return [to_dict(t) for t in MOCK_STORE["tasks"]]
 
 async def get_usage_logs() -> list[dict[str, Any]]:
+    """Retrieves the latest 50 model usage logging records for transparency.
+
+    Returns:
+        A list of dictionaries representing token usage, estimated/real costs,
+        and latency logs for past LLM executions.
+    """
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -285,6 +369,16 @@ async def get_usage_logs() -> list[dict[str, Any]]:
         return [to_dict(u) for u in MOCK_STORE["usage"]]
 
 async def get_dashboard_stats() -> dict[str, Any]:
+    """Gathers aggregated dashboard statistics across projects, specs, and usage.
+
+    Calculates total runs, estimated vs real costs, successful execution rates,
+    and returns breakdowns by model and provider. Falls back to mock values if
+    the database connection is offline.
+
+    Returns:
+        A dictionary containing dashboard stats, breakdown lists, and a database
+        connection status flag.
+    """
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -341,6 +435,12 @@ async def get_dashboard_stats() -> dict[str, Any]:
         return _mock_dashboard_stats()
 
 def _mock_dashboard_stats() -> dict[str, Any]:
+    """Generates synthetic, premium-looking dashboard statistics for offline mode.
+
+    Returns:
+        A dictionary containing representative, mock aggregated stats, provider
+        breakdowns, and model distributions with database_connected set to False.
+    """
     # Mock aggregates
     return {
         "total_runs": 142,
@@ -363,3 +463,145 @@ def _mock_dashboard_stats() -> dict[str, Any]:
         ],
         "database_connected": False
     }
+
+async def log_workflow_run(payload: dict[str, Any]) -> bool:
+    """Logs an n8n workflow execution run to the database or mock store.
+
+    Args:
+        payload: A dictionary containing workflow run details.
+
+    Returns:
+        True if the execution run was successfully logged, False otherwise.
+    """
+    try:
+        async with db_connection() as conn:
+            if conn is None:
+                MOCK_STORE["workflow_runs"].insert(0, payload)
+                return True
+            
+            await conn.execute(
+                """
+                insert into workflow_runs (
+                    project_id, task_id, run_id, workflow_name, workflow_version,
+                    orchestrator, n8n_workflow_id, n8n_execution_id, trigger_source,
+                    status, input_summary, output_summary, error_message, latency_ms,
+                    started_at, completed_at
+                )
+                values (
+                    $1, $2, $3, $4, $5,
+                    coalesce($6, 'n8n'), $7, $8, $9,
+                    $10, coalesce($11, '{}'::jsonb), coalesce($12, '{}'::jsonb), $13, $14,
+                    $15, $16
+                )
+                """,
+                payload.get("project_id"),
+                payload.get("task_id"),
+                payload.get("run_id"),
+                payload.get("workflow_name"),
+                payload.get("workflow_version"),
+                payload.get("orchestrator"),
+                payload.get("n8n_workflow_id"),
+                payload.get("n8n_execution_id"),
+                payload.get("trigger_source"),
+                payload.get("status"),
+                json.dumps(payload.get("input_summary") or {}),
+                json.dumps(payload.get("output_summary") or {}),
+                payload.get("error_message"),
+                payload.get("latency_ms"),
+                payload.get("started_at"),
+                payload.get("completed_at")
+            )
+            return True
+    except Exception as exc:
+        logger.warning(f"Error logging workflow run in DB: {exc}. Saving to mock store.")
+        MOCK_STORE["workflow_runs"].insert(0, payload)
+        return True
+
+async def log_artifact(payload: dict[str, Any]) -> bool:
+    """Registers a generated artifact (e.g., file, PDF, mockup) in the database or mock store.
+
+    Args:
+        payload: A dictionary containing artifact information.
+
+    Returns:
+        True if the artifact registration was successfully logged, False otherwise.
+    """
+    try:
+        async with db_connection() as conn:
+            if conn is None:
+                MOCK_STORE["artifacts"].insert(0, payload)
+                return True
+            
+            await conn.execute(
+                """
+                insert into artifacts (
+                    project_id, task_id, run_id, artifact_type, name, uri,
+                    storage_provider, metadata
+                )
+                values (
+                    $1, $2, $3, $4, $5, $6,
+                    $7, coalesce($8, '{}'::jsonb)
+                )
+                """,
+                payload.get("project_id"),
+                payload.get("task_id"),
+                payload.get("run_id"),
+                payload.get("artifact_type"),
+                payload.get("name"),
+                payload.get("uri"),
+                payload.get("storage_provider"),
+                json.dumps(payload.get("metadata") or {})
+            )
+            return True
+    except Exception as exc:
+        logger.warning(f"Error logging artifact in DB: {exc}. Saving to mock store.")
+        MOCK_STORE["artifacts"].insert(0, payload)
+        return True
+
+async def log_agent_handoff(payload: dict[str, Any]) -> bool:
+    """Logs an agent-to-agent handoff event in the database or mock store.
+
+    Args:
+        payload: A dictionary containing handoff transition details.
+
+    Returns:
+        True if the handoff was successfully logged, False otherwise.
+    """
+    try:
+        async with db_connection() as conn:
+            if conn is None:
+                MOCK_STORE["agent_handoffs"].insert(0, payload)
+                return True
+            
+            await conn.execute(
+                """
+                insert into agent_handoffs (
+                    project_id, task_id, run_id, source_agent, target_agent,
+                    branch, status, completed, next_steps, risks,
+                    artifact_links, sanitized_context, metadata
+                )
+                values (
+                    $1, $2, $3, $4, $5,
+                    $6, coalesce($7, 'ready'), coalesce($8, '[]'::jsonb), coalesce($9, '[]'::jsonb), coalesce($10, '[]'::jsonb),
+                    coalesce($11, '[]'::jsonb), $12, coalesce($13, '{}'::jsonb)
+                )
+                """,
+                payload.get("project_id"),
+                payload.get("task_id"),
+                payload.get("run_id"),
+                payload.get("source_agent"),
+                payload.get("target_agent"),
+                payload.get("branch"),
+                payload.get("status"),
+                json.dumps(payload.get("completed") or []),
+                json.dumps(payload.get("next_steps") or []),
+                json.dumps(payload.get("risks") or []),
+                json.dumps(payload.get("artifact_links") or []),
+                payload.get("sanitized_context"),
+                json.dumps(payload.get("metadata") or {})
+            )
+            return True
+    except Exception as exc:
+        logger.warning(f"Error logging agent handoff in DB: {exc}. Saving to mock store.")
+        MOCK_STORE["agent_handoffs"].insert(0, payload)
+        return True

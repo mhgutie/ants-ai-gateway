@@ -113,6 +113,7 @@ def test_create_repository_success_is_sanitized(monkeypatch):
                 },
             )
 
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setenv("ANTS_GITHUB_TOKEN", "secret-token")
     monkeypatch.setattr("app.github_repositories.httpx.AsyncClient", FakeClient)
     request = GitHubRepositoryCreateRequest(
@@ -143,6 +144,7 @@ def test_create_repository_error_is_sanitized(monkeypatch):
         async def post(self, endpoint, json, headers):
             return httpx.Response(422, json={"message": "token-like detail should not be returned"})
 
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setenv("ANTS_GITHUB_TOKEN", "secret-token")
     monkeypatch.setattr("app.github_repositories.httpx.AsyncClient", FakeClient)
     request = GitHubRepositoryCreateRequest(

@@ -109,6 +109,8 @@ create table if not exists workflow_runs (
     workflow_name text not null,
     workflow_version text,
     orchestrator text not null default 'n8n',
+    n8n_workflow_id text,
+    n8n_execution_id text,
     trigger_source text,
     status text not null,
     input_summary jsonb not null default '{}'::jsonb,
@@ -133,11 +135,31 @@ create table if not exists harness_results (
 
 create table if not exists artifacts (
     id uuid primary key default gen_random_uuid(),
+    project_id uuid references projects(id) on delete set null,
     task_id text,
     run_id text,
     artifact_type text not null,
     name text not null,
     uri text not null,
+    storage_provider text,
+    metadata jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now()
+);
+
+create table if not exists agent_handoffs (
+    id uuid primary key default gen_random_uuid(),
+    project_id uuid references projects(id) on delete set null,
+    task_id text,
+    run_id text not null,
+    source_agent text not null,
+    target_agent text not null,
+    branch text,
+    status text not null default 'ready',
+    completed jsonb not null default '[]'::jsonb,
+    next_steps jsonb not null default '[]'::jsonb,
+    risks jsonb not null default '[]'::jsonb,
+    artifact_links jsonb not null default '[]'::jsonb,
+    sanitized_context text not null,
     metadata jsonb not null default '{}'::jsonb,
     created_at timestamptz not null default now()
 );
@@ -231,8 +253,12 @@ create index if not exists idx_tasks_linear_issue_key on tasks(linear_issue_key)
 create index if not exists idx_tool_runs_task_run on tool_runs(task_id, run_id);
 create index if not exists idx_workflow_runs_task_run on workflow_runs(task_id, run_id);
 create index if not exists idx_workflow_runs_project_id on workflow_runs(project_id);
+create index if not exists idx_workflow_runs_n8n_execution_id on workflow_runs(n8n_execution_id);
 create index if not exists idx_harness_results_task_run on harness_results(task_id, run_id);
 create index if not exists idx_artifacts_task_run on artifacts(task_id, run_id);
+create index if not exists idx_artifacts_project_id on artifacts(project_id);
+create index if not exists idx_agent_handoffs_task_run on agent_handoffs(task_id, run_id);
+create index if not exists idx_agent_handoffs_project_id on agent_handoffs(project_id);
 create index if not exists idx_knowledge_chunks_project_id on knowledge_chunks(project_id);
 create index if not exists idx_decisions_project_task on decisions(project_id, task_id);
 create index if not exists idx_service_health_service_name on service_health(service_name);
@@ -246,6 +272,7 @@ alter table if exists tool_runs enable row level security;
 alter table if exists workflow_runs enable row level security;
 alter table if exists harness_results enable row level security;
 alter table if exists artifacts enable row level security;
+alter table if exists agent_handoffs enable row level security;
 alter table if exists knowledge_chunks enable row level security;
 alter table if exists decisions enable row level security;
 alter table if exists model_routes enable row level security;
@@ -263,6 +290,7 @@ revoke all on tool_runs from anon, authenticated;
 revoke all on workflow_runs from anon, authenticated;
 revoke all on harness_results from anon, authenticated;
 revoke all on artifacts from anon, authenticated;
+revoke all on agent_handoffs from anon, authenticated;
 revoke all on knowledge_chunks from anon, authenticated;
 revoke all on decisions from anon, authenticated;
 revoke all on model_routes from anon, authenticated;

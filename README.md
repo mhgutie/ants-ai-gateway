@@ -195,6 +195,70 @@ Use an HTTP Request node:
 - Route blocked responses to a human review, summarization, or RAG workflow.
 - Store `task_id`, `run_id`, `recommended_model`, `estimated_cost_usd`, and `stop_rules` in your workflow logs.
 
+### n8n Supabase Memory Contract
+
+n8n should write durable ANTS memory through the gateway instead of connecting directly to Postgres from each workflow. This keeps Supabase as the canonical memory while n8n remains the orchestrator.
+
+All endpoints require `X-ANTS-API-Key`.
+
+Log a workflow execution:
+
+```bash
+curl -X POST http://localhost:8010/n8n/workflow-runs \
+  -H "Content-Type: application/json" \
+  -H "X-ANTS-API-Key: $ANTS_KEY" \
+  -d '{
+    "run_id":"run-n8n-001",
+    "task_id":"ANTS-N8N-001",
+    "workflow_name":"spec-intake",
+    "n8n_workflow_id":"wf-123",
+    "n8n_execution_id":"exec-456",
+    "trigger_source":"webhook",
+    "status":"success",
+    "input_summary":{"source":"n8n"},
+    "output_summary":{"created":"spec"}
+  }'
+```
+
+Register an artifact:
+
+```bash
+curl -X POST http://localhost:8010/n8n/artifacts \
+  -H "Content-Type: application/json" \
+  -H "X-ANTS-API-Key: $ANTS_KEY" \
+  -d '{
+    "task_id":"ANTS-N8N-001",
+    "run_id":"run-n8n-001",
+    "artifact_type":"google_drive_file",
+    "name":"handoff.md",
+    "uri":"https://drive.google.com/...",
+    "storage_provider":"google_drive",
+    "metadata":{"mime_type":"text/markdown"}
+  }'
+```
+
+Record a sanitized agent handoff:
+
+```bash
+curl -X POST http://localhost:8010/n8n/handoffs \
+  -H "Content-Type: application/json" \
+  -H "X-ANTS-API-Key: $ANTS_KEY" \
+  -d '{
+    "run_id":"run-n8n-001",
+    "task_id":"ANTS-N8N-001",
+    "source_agent":"designer",
+    "target_agent":"codex",
+    "branch":"feat/dashboard",
+    "completed":["Spec and mockup created."],
+    "next_steps":["Implement static UI from mockup."],
+    "risks":["Do not expose API keys."],
+    "artifact_links":[{"name":"mockup","uri":"https://drive.google.com/..."}],
+    "sanitized_context":"No secrets. Build the dashboard from the approved mockup."
+  }'
+```
+
+Do not send provider API keys, OAuth tokens, refresh tokens, database credentials, or raw `.env` contents in these payloads.
+
 ## GitHub Repository Provisioning
 
 ANTS can prepare GitHub repositories through a protected gateway endpoint. Configure the token only at runtime:
