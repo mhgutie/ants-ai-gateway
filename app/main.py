@@ -38,6 +38,15 @@ from app.services.preflight_service import run_preflight
 from app.services.usage_logger import log_usage
 from app.executor_smoke import run_executor_smoke
 from app.tool_executors import list_executor_sessions, list_tool_executor_statuses
+from app.db_queries import (
+    get_projects,
+    create_project,
+    get_specs,
+    create_spec,
+    get_tasks,
+    get_usage_logs,
+    get_dashboard_stats,
+)
 
 app = FastAPI(title="ANTS AI Gateway", version="0.1.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -234,3 +243,61 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def usage(request: UsageLogRequest) -> UsageLogResponse:
     logged = await log_usage(request)
     return UsageLogResponse(logged=logged, run_id=request.run_id)
+
+
+@app.get("/api/dashboard-stats", dependencies=[Depends(require_gateway_api_key)])
+async def api_dashboard_stats() -> dict:
+    return await get_dashboard_stats()
+
+
+@app.get("/api/projects", dependencies=[Depends(require_gateway_api_key)])
+async def api_projects() -> dict:
+    return {"projects": await get_projects()}
+
+
+@app.post("/api/projects", dependencies=[Depends(require_gateway_api_key)])
+async def api_create_project(request: dict) -> dict:
+    name = request.get("name")
+    if not name:
+        raise HTTPException(status_code=400, detail="Name is required.")
+    return await create_project(
+        name=name,
+        key=request.get("key"),
+        owner=request.get("owner"),
+        metadata=request.get("metadata"),
+    )
+
+
+@app.get("/api/specs", dependencies=[Depends(require_gateway_api_key)])
+async def api_specs() -> dict:
+    return {"specs": await get_specs()}
+
+
+@app.post("/api/specs", dependencies=[Depends(require_gateway_api_key)])
+async def api_create_spec(request: dict) -> dict:
+    title = request.get("title")
+    problem = request.get("problem")
+    if not title or not problem:
+        raise HTTPException(status_code=400, detail="Title and problem are required.")
+    return await create_spec(
+        project_id=request.get("project_id"),
+        title=title,
+        problem=problem,
+        expected_result=request.get("expected_result"),
+        allowed_tools=request.get("allowed_tools"),
+        required_agents=request.get("required_agents"),
+        acceptance_criteria=request.get("acceptance_criteria"),
+        risks=request.get("risks"),
+        budget=request.get("budget"),
+        test_harness=request.get("test_harness"),
+    )
+
+
+@app.get("/api/tasks", dependencies=[Depends(require_gateway_api_key)])
+async def api_tasks() -> dict:
+    return {"tasks": await get_tasks()}
+
+
+@app.get("/api/usage-logs", dependencies=[Depends(require_gateway_api_key)])
+async def api_usage_logs() -> dict:
+    return {"logs": await get_usage_logs()}

@@ -3,153 +3,492 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ANTS Gateway</title>
+    <title>ANTS - Solution Factory</title>
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/ui/assets/styles.css" />
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
-  <body>
-    <main class="shell">
-      <section class="topbar">
-        <div>
-          <p class="eyebrow">ANTS AI Gateway</p>
-          <h1>Operator Console</h1>
+  <body class="dark-theme">
+    <div class="page-shell">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="brand-group">
+          <div class="brand-mark">ANTS</div>
+          <div>
+            <p class="eyebrow">Multi-Agent Solution Factory</p>
+            <h1>ANTS Gateway</h1>
+          </div>
         </div>
-        <form id="settings-form" class="settings">
+        <div class="topbar-controls">
+          <!-- Google Sign-In & User Profile Area -->
+          <div id="user-profile-area" class="user-profile-area">
+            <button id="google-signin-btn" class="btn secondary compact-btn">Sign in with Google</button>
+            <div id="user-info" class="user-info hidden">
+              <img id="user-avatar" class="user-avatar" src="" alt="User Avatar" />
+              <div class="user-details">
+                <span id="user-name" class="user-name">Guest</span>
+                <span id="user-email" class="user-email"></span>
+              </div>
+              <button id="logout-btn" class="btn secondary compact-btn icon-btn" title="Sign Out">🚪</button>
+            </div>
+          </div>
+
+          <div class="role-badge" id="role-display">User Mode</div>
+          <button id="admin-toggle-btn" class="btn secondary compact-btn">Unlock Admin</button>
+          <button id="settings-toggle-btn" class="btn secondary compact-btn icon-btn">⚙️</button>
+        </div>
+      </header>
+
+      <!-- Settings Drawer -->
+      <div id="settings-drawer" class="settings-drawer collapsed">
+        <form id="settings-form" class="settings-form">
+          <h3>Gateway Credentials</h3>
           <label>
-            API URL
-            <input id="api-base" name="api-base" type="url" value="" placeholder="http://localhost:8000" />
+            API Base URL
+            <input id="api-base" name="api-base" type="url" placeholder="http://localhost:8000" />
           </label>
           <label>
-            Gateway key
+            Gateway API Key
             <input id="api-key" name="api-key" type="password" autocomplete="off" placeholder="X-ANTS-API-Key" />
           </label>
-          <button type="submit">Save</button>
-        </form>
-      </section>
-
-      <section class="status-grid">
-        <article class="panel compact">
-          <div class="panel-head">
-            <h2>Health</h2>
-            <button data-action="health">Refresh</button>
-          </div>
-          <pre id="health-output" class="output">Waiting for refresh.</pre>
-        </article>
-        <article class="panel compact">
-          <div class="panel-head">
-            <h2>Dependencies</h2>
-            <button data-action="dependencies">Refresh</button>
-          </div>
-          <pre id="dependencies-output" class="output">Requires gateway key.</pre>
-        </article>
-        <article class="panel compact">
-          <div class="panel-head">
-            <h2>Credentials</h2>
-            <button data-action="credentials">Refresh</button>
-          </div>
-          <pre id="credentials-output" class="output">Requires gateway key.</pre>
-        </article>
-      </section>
-
-      <section class="workspace">
-        <nav class="tabs" aria-label="Operator views">
-          <button class="tab active" data-tab="preflight">Preflight</button>
-          <button class="tab" data-tab="models">Models</button>
-          <button class="tab" data-tab="executors">Executors</button>
-          <button class="tab" data-tab="sessions">Sessions</button>
-          <button class="tab" data-tab="smoke">Smoke Test</button>
-        </nav>
-
-        <article id="tab-preflight" class="panel tab-panel active">
-          <div class="panel-head">
-            <h2>Preflight</h2>
-            <button id="run-preflight" type="button">Run</button>
-          </div>
-          <div class="form-grid">
-            <label>
-              Task ID
-              <input id="task-id" value="ants-ui-preflight" />
-            </label>
-            <label>
-              Task Type
-              <select id="task-type"></select>
-            </label>
-            <label>
-              Context Scope
-              <select id="context-scope">
-                <option value="limited">limited</option>
-                <option value="selected_files">selected_files</option>
-                <option value="full_repo">full_repo</option>
-              </select>
-            </label>
-            <label class="checkbox">
-              <input id="explicitly-authorized" type="checkbox" />
-              Explicitly authorized
-            </label>
-          </div>
-          <label class="stacked">
-            User request
-            <textarea id="user-request" rows="6">Review this ANTS task and estimate the safest model route.</textarea>
+          <h3>Google Sign-In</h3>
+          <label>
+            Google Client ID (Optional)
+            <input id="google-client-id" name="google-client-id" type="text" placeholder="your-client-id.apps.googleusercontent.com" />
           </label>
-          <pre id="preflight-output" class="output tall">Ready.</pre>
+          <div class="drawer-actions">
+            <button type="submit" class="btn">Save & Lock</button>
+            <button id="settings-close-btn" type="button" class="btn secondary">Close</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Main Navigation Tabs -->
+      <nav class="navigation-tabs" aria-label="ANTS Views">
+        <button class="nav-tab active" data-tab="workspace">Agent Workspace</button>
+        <button class="nav-tab admin-only hidden" data-tab="dashboard">Dashboard</button>
+        <button class="nav-tab admin-only hidden" data-tab="specs">Spec Builder</button>
+        <button class="nav-tab admin-only hidden" data-tab="operator">Operator Tools</button>
+        <button class="nav-tab admin-only hidden" data-tab="audit">Audit Ledger</button>
+      </nav>
+
+      <!-- Main Layout -->
+      <main class="main-content">
+        
+        <!-- Tab: Agent Workspace (Conversational Client Intake) -->
+        <article id="tab-workspace" class="tab-panel active">
+          <div class="workspace-grid">
+            
+            <!-- Left Panel: Challenge Intake -->
+            <section class="panel glass-panel">
+              <div class="panel-head border-bottom">
+                <div class="panel-title">
+                  <span class="pill ok">Intake</span>
+                  <h2>Describe Your Challenge</h2>
+                </div>
+              </div>
+              <form id="challenge-form" class="challenge-form stack">
+                <label>
+                  <span>Intake Mode</span>
+                  <select id="challenge-mode">
+                    <option value="app">Build an app</option>
+                    <option value="expert_team">Create an expert team</option>
+                    <option value="workflow">Generate a workflow</option>
+                    <option value="document">Analyze a document or process</option>
+                    <option value="proposal">Build a proposal or deliverable</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Project Name</span>
+                  <input id="challenge-project-name" type="text" placeholder="Example: ANTS Opportunity Scout" />
+                </label>
+                <label>
+                  <span>Task ID</span>
+                  <input id="challenge-task-id" type="text" value="ants-task-001" />
+                </label>
+                <label>
+                  <span>Context Scope</span>
+                  <select id="challenge-scope">
+                    <option value="limited">limited</option>
+                    <option value="selected_files">selected_files</option>
+                    <option value="full_repo">full_repo</option>
+                  </select>
+                </label>
+                <label class="checkbox-row">
+                  <input id="challenge-explicit" type="checkbox" />
+                  <span>Explicitly Authorized</span>
+                </label>
+                <label>
+                  <span>Describe what you need</span>
+                  <textarea id="challenge-request" rows="7" placeholder="Describe the company, app, workflow, or proposal you want ANTS to build..."></textarea>
+                </label>
+                
+                <!-- File Upload & Context Reference Uploader -->
+                <div class="file-upload-container">
+                  <span class="field-label">Reference Files & Context Attachments</span>
+                  <div id="file-dropzone" class="file-dropzone">
+                    <span class="upload-icon">📁</span>
+                    <p class="upload-text">Drag & drop files here or <span class="browse-link">browse</span></p>
+                    <span class="upload-subtext">Supports code files, text, JSON, PDF, and images (Max 5MB)</span>
+                    <input id="file-input" type="file" multiple class="hidden-input" />
+                  </div>
+                  <div id="file-list" class="file-list hidden"></div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn primary-btn">Generate & Run Task</button>
+                  <button id="load-sample-btn" type="button" class="btn secondary">Load Sample</button>
+                </div>
+              </form>
+            </section>
+
+            <!-- Right Panel: Agent Chat & Traces -->
+            <section class="panel glass-panel flex-panel">
+              <div class="panel-head border-bottom">
+                <div class="panel-title">
+                  <span class="pill highlight">Workspace</span>
+                  <h2>Agent Workspace Trace</h2>
+                </div>
+              </div>
+              
+              <!-- Routing & Preflight Status Badge -->
+              <div id="routing-badge-container" class="routing-badge hidden">
+                <div class="routing-badge-main">
+                  <span id="badge-model">auto</span>
+                  <span id="badge-cost" class="badge-accent">$0.00</span>
+                </div>
+                <div class="routing-badge-details">
+                  <span id="badge-risk" class="pill text-uppercase">low</span>
+                  <span id="badge-mode">direct</span>
+                  <span id="badge-reason">preflight approved</span>
+                </div>
+              </div>
+
+              <!-- Live Chat Log -->
+              <div id="chat-conversation" class="chat-conversation">
+                <div class="system-message">No active agent run. Describe a challenge and launch execution to start.</div>
+              </div>
+
+              <!-- Harness Validation status card -->
+              <div id="harness-card-container" class="harness-card hidden">
+                <div class="harness-header">
+                  <div class="harness-title">
+                    <span class="harness-icon">🛡️</span>
+                    <strong>Harness Engineering Verdict</strong>
+                  </div>
+                  <span id="harness-status-pill" class="pill ok">PASSED</span>
+                </div>
+                <div class="harness-body">
+                  <p><strong>Score:</strong> <span id="harness-score">100/100</span></p>
+                  <p><strong>Type:</strong> <span id="harness-type">Technical validation</span></p>
+                  <p><strong>Structured Findings:</strong></p>
+                  <pre id="harness-findings" class="code-block"></pre>
+                </div>
+              </div>
+            </section>
+
+          </div>
         </article>
 
-        <article id="tab-models" class="panel tab-panel">
-          <div class="panel-head">
-            <h2>Models</h2>
-            <button data-action="models">Refresh</button>
+        <!-- Tab: Admin Dashboard -->
+        <article id="tab-dashboard" class="tab-panel">
+          <div class="stats-grid">
+            <div class="metric-card">
+              <span>Total Agent Runs</span>
+              <strong id="stat-total-runs">-</strong>
+            </div>
+            <div class="metric-card">
+              <span>Real Accumulated Cost</span>
+              <strong id="stat-real-cost" class="cost-stat">-</strong>
+            </div>
+            <div class="metric-card">
+              <span>Estimated Preflight Cost</span>
+              <strong id="stat-est-cost">-</strong>
+            </div>
+            <div class="metric-card">
+              <span>Success Rate</span>
+              <strong id="stat-success-rate">-</strong>
+            </div>
           </div>
-          <div id="models-table" class="table-wrap"></div>
-          <pre id="models-output" class="output collapsed"></pre>
+
+          <div class="dashboard-visuals">
+            <div class="panel glass-panel">
+              <div class="panel-head">
+                <h2>Cost Allocation by Provider</h2>
+              </div>
+              <div id="provider-chart" class="chart-container">
+                <p class="empty-state">No chart data.</p>
+              </div>
+            </div>
+            <div class="panel glass-panel">
+              <div class="panel-head">
+                <h2>Cost Allocation by Model</h2>
+              </div>
+              <div id="model-chart" class="chart-container">
+                <p class="empty-state">No chart data.</p>
+              </div>
+            </div>
+          </div>
         </article>
 
-        <article id="tab-executors" class="panel tab-panel">
-          <div class="panel-head">
-            <h2>Executors</h2>
-            <button data-action="executors">Refresh</button>
+        <!-- Tab: Spec Builder -->
+        <article id="tab-specs" class="tab-panel">
+          <div class="specs-wrapper">
+            <section class="panel glass-panel">
+              <div class="panel-head border-bottom">
+                <div class="panel-title">
+                  <span class="pill">Spec-Driven Development</span>
+                  <h2>Create Functional Specification</h2>
+                </div>
+              </div>
+              <form id="spec-builder-form" class="spec-form stack">
+                <div class="form-row-2">
+                  <label>
+                    Project Link
+                    <select id="spec-project-id">
+                      <option value="">No Project Link</option>
+                    </select>
+                  </label>
+                  <label>
+                    Spec Title
+                    <input id="spec-title" placeholder="Specification Title" required />
+                  </label>
+                </div>
+                <label>
+                  Problem Context / Background
+                  <textarea id="spec-problem" rows="4" placeholder="Describe the problem this spec solves..." required></textarea>
+                </label>
+                <label>
+                  Expected Result / Deliverables
+                  <textarea id="spec-expected" rows="3" placeholder="What are the required outputs and artifacts..."></textarea>
+                </label>
+                <div class="form-row-2">
+                  <label>
+                    Allowed Tools (comma-separated)
+                    <input id="spec-tools" placeholder="run_command, write_to_file, view_file" />
+                  </label>
+                  <label>
+                    Required Models (comma-separated)
+                    <input id="spec-models" placeholder="qwen3-coder, kimi-k2.6" />
+                  </label>
+                </div>
+                <div class="form-row-2">
+                  <label>
+                    Acceptance Criteria (one per line)
+                    <textarea id="spec-criteria" rows="4" placeholder="Critera 1&#10;Criteria 2"></textarea>
+                  </label>
+                  <label>
+                    Identified Risks (one per line)
+                    <textarea id="spec-risks" rows="4" placeholder="Risk 1&#10;Risk 2"></textarea>
+                  </label>
+                </div>
+                <div class="form-row-2">
+                  <label>
+                    Budget Cost Limit (USD)
+                    <input id="spec-budget-cost" type="number" step="0.01" value="0.50" />
+                  </label>
+                  <label>
+                    Max Allowed Iterations
+                    <input id="spec-budget-iter" type="number" value="5" />
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn primary-btn">Save Draft Specification</button>
+                  <button id="spec-reset-btn" type="button" class="btn secondary">Reset Form</button>
+                </div>
+              </form>
+            </section>
+            
+            <section class="panel glass-panel">
+              <div class="panel-head border-bottom">
+                <h2>Saved Specifications Ledger</h2>
+              </div>
+              <div id="specs-list" class="specs-list stack">
+                <p class="empty-state">No specifications loaded.</p>
+              </div>
+            </section>
           </div>
-          <div id="executors-table" class="table-wrap"></div>
-          <pre id="executors-output" class="output collapsed"></pre>
         </article>
 
-        <article id="tab-sessions" class="panel tab-panel">
-          <div class="panel-head">
-            <h2>Sessions</h2>
-            <button data-action="sessions">Refresh</button>
+        <!-- Tab: Operator Tools -->
+        <article id="tab-operator" class="tab-panel">
+          <div class="operator-grid">
+            
+            <!-- Left Side: Health & Models -->
+            <div class="stack">
+              <div class="panel glass-panel compact-panel">
+                <div class="panel-head">
+                  <h2>System Health & Dependencies</h2>
+                  <button id="health-refresh-btn" class="btn compact-btn">Refresh</button>
+                </div>
+                <div class="health-block">
+                  <div class="health-row">
+                    <span>Gateway Server</span>
+                    <span id="health-gateway-pill" class="pill warn">Unknown</span>
+                  </div>
+                  <div class="health-row">
+                    <span>Supabase Postgres Connection</span>
+                    <span id="health-db-pill" class="pill warn">Unknown</span>
+                  </div>
+                  <div class="health-row">
+                    <span>Credentials Pool Status</span>
+                    <span id="health-creds-pill" class="pill warn">Unknown</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>Configured AI Models</h2>
+                  <button id="models-refresh-btn" class="btn compact-btn">Refresh</button>
+                </div>
+                <div id="models-table" class="table-wrap">
+                  <p class="empty-state">Load models.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side: Executors & Sessions & Smoke Tests -->
+            <div class="stack">
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>Tool Executors Policy</h2>
+                  <button id="executors-refresh-btn" class="btn compact-btn">Refresh</button>
+                </div>
+                <div id="executors-table" class="table-wrap">
+                  <p class="empty-state">Load executors.</p>
+                </div>
+              </div>
+
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>Active Executor Sessions</h2>
+                  <button id="sessions-refresh-btn" class="btn compact-btn">Refresh</button>
+                </div>
+                <div id="sessions-table" class="table-wrap">
+                  <p class="empty-state">Load sessions.</p>
+                </div>
+              </div>
+
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>Guarded Executor Smoke Test</h2>
+                  <button id="run-smoke-btn" class="btn primary-btn compact-btn">Run Test</button>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    Target Executor
+                    <select id="smoke-executor">
+                      <option value="codex">codex</option>
+                      <option value="claude_code">claude_code</option>
+                      <option value="antigravity">antigravity</option>
+                    </select>
+                  </label>
+                  <label>
+                    Test Mode
+                    <select id="smoke-mode">
+                      <option value="version">version</option>
+                      <option value="prompt">prompt</option>
+                    </select>
+                  </label>
+                  <label>
+                    Timeout Seconds
+                    <input id="smoke-timeout" type="number" min="5" max="120" value="30" />
+                  </label>
+                </div>
+                <pre id="smoke-output" class="output-console">Ready.</pre>
+              </div>
+            </div>
+
           </div>
-          <div id="sessions-table" class="table-wrap"></div>
-          <pre id="sessions-output" class="output collapsed"></pre>
         </article>
 
-        <article id="tab-smoke" class="panel tab-panel">
-          <div class="panel-head">
-            <h2>Executor Smoke Test</h2>
-            <button id="run-smoke" type="button">Run</button>
+        <!-- Tab: Audit Ledger & n8n RAG -->
+        <article id="tab-audit" class="tab-panel">
+          <div class="audit-grid">
+            
+            <!-- Left Panel: Model Usage History -->
+            <section class="panel glass-panel flex-panel">
+              <div class="panel-head border-bottom">
+                <div class="panel-title">
+                  <h2>Model Usage Ledger</h2>
+                  <button id="usage-refresh-btn" class="btn compact-btn">Refresh Logs</button>
+                </div>
+              </div>
+              <div id="usage-table-container" class="table-wrap">
+                <p class="empty-state">No logs loaded.</p>
+              </div>
+            </section>
+
+            <!-- Right Panel: Advanced scrapers & helpers -->
+            <div class="stack">
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>n8n Workflow JSON Structural Analyzer</h2>
+                  <button id="run-analysis-btn" class="btn primary-btn compact-btn">Analyze JSON</button>
+                </div>
+                <label>
+                  Paste n8n Canvas JSON
+                  <textarea id="workflow-json-input" rows="6" placeholder='{"nodes": [...], "connections": {...}}'></textarea>
+                </label>
+                <div id="analysis-output" class="analysis-results stack compact top-gap">
+                  <p class="empty-state">Paste a workflow and analyze.</p>
+                </div>
+              </div>
+
+              <div class="panel glass-panel">
+                <div class="panel-head">
+                  <h2>Google Sheets / n8n Workflow Catalog</h2>
+                </div>
+                <div class="catalog-info">
+                  <p><strong>Connected Sheet:</strong> 1gwtUjIYTGD4hFtZtluXTBHRcAro6TT8NuT1BKqbdyso</p>
+                  <p><strong>NocoDB URL:</strong> <a href="https://n8n.authomata.tech" target="_blank" class="text-link">n8n.authomata.tech</a></p>
+                  <p>Fallback local sheet catalog: <code>WF_n8n.xlsx</code></p>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="form-grid">
-            <label>
-              Executor
-              <select id="smoke-executor">
-                <option value="codex">codex</option>
-                <option value="claude_code">claude_code</option>
-                <option value="antigravity">antigravity</option>
-              </select>
-            </label>
-            <label>
-              Mode
-              <select id="smoke-mode">
-                <option value="version">version</option>
-                <option value="prompt">prompt</option>
-              </select>
-            </label>
-            <label>
-              Timeout seconds
-              <input id="smoke-timeout" type="number" min="5" max="120" value="30" />
-            </label>
-          </div>
-          <pre id="smoke-output" class="output tall">Ready.</pre>
         </article>
-      </section>
-    </main>
+
+      </main>
+    </div>
+
+    <!-- Admin password modal -->
+    <div id="admin-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <h3>Unlock Advanced Operator Console</h3>
+        <p>Please enter the Gateway Key to unlock the dynamic cost dashboard, spec builder, and agent executor tools.</p>
+        <form id="admin-auth-form" class="stack">
+          <input id="admin-key-input" type="password" autocomplete="off" placeholder="X-ANTS-API-Key" required />
+          <div class="modal-actions">
+            <button type="submit" class="btn">Unlock Console</button>
+            <button id="admin-cancel-btn" type="button" class="btn secondary">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Google Login / Auth Overlay -->
+    <div id="auth-modal" class="auth-overlay hidden">
+      <div class="auth-card">
+        <div class="brand-mark" style="margin: 0 auto 20px;">ANTS</div>
+        <h3>Welcome to ANTS Workspace</h3>
+        <p>Please sign in with Google to interact with the Multi-Agent Solution Factory and start requesting tasks.</p>
+        <div class="stack">
+          <button id="google-login-modal-btn" class="btn primary-btn" style="width: 100%; height: 44px; font-size: 1rem; font-family: inherit;">
+            Sign in with Google / Gmail
+          </button>
+          <button id="guest-login-btn" class="btn secondary" style="width: 100%;">
+            Continue as Guest (Read-Only)
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="/ui/assets/app.js" defer></script>
   </body>
 </html>
