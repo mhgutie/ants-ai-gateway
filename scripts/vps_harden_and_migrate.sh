@@ -5,8 +5,10 @@ set -e
 
 COMPOSE_DIR="/root/ants-infra/supabase-ants"
 COMPOSE_FILE="$COMPOSE_DIR/docker-compose.yml"
-BRANCH="feat/ant-12-supabase-network-hardening"
-RAW="https://raw.githubusercontent.com/mhgutie/ants-ai-gateway/$BRANCH"
+COMMIT_SHA="${ANTS_GATEWAY_COMMIT_SHA:-90ef8ea2fd654545f4aab69edd1128993feb8869}"
+RAW="https://raw.githubusercontent.com/mhgutie/ants-ai-gateway/$COMMIT_SHA"
+REPAIR_COMPOSE_PORTS_SHA256="865dd4e9759159abac65078023ae8027debca2ec160e90633d2b30f2c881a5b6"
+MIGRATION_002_SHA256="1336d6607a812523c46efa1289e67009d6f8469a3cf97e7bfd8f59df9907e840"
 
 echo "=== ANT-12 VPS hardening ==="
 echo "Compose dir: $COMPOSE_DIR"
@@ -29,6 +31,7 @@ PY
 # --- Step 3: download repair script ---
 echo "[2/6] Downloading repair script..."
 curl -fsSL "$RAW/scripts/repair_compose_ports.py" -o /tmp/rcp.py || { echo "ERROR: failed to download repair script"; exit 1; }
+echo "$REPAIR_COMPOSE_PORTS_SHA256  /tmp/rcp.py" | sha256sum -c -
 
 # --- Step 4: run repair (removes 5432/6543, restores other ports:, validates YAML) ---
 echo "[3/6] Repairing docker-compose.yml..."
@@ -53,7 +56,11 @@ sleep 6
 
 echo ""
 echo "=== Port verification (5432/6543 must NOT appear) ==="
-ss -ltnp | grep -E '(:5432|:6543|:8000|:8443|:8010)' || echo "(no ports matched — 5432/6543 successfully removed)"
+if ss -ltnp | grep -E ':(5432|6543)\b'; then
+  echo "ERROR: forbidden public Postgres ports 5432/6543 are still listening."
+  exit 1
+fi
+echo "Forbidden public Postgres ports removed: OK"
 
 echo ""
 echo "=== Container status ==="
@@ -63,7 +70,9 @@ docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}" | grep -E "pooler
 echo ""
 echo "[6/6] Applying migration 002..."
 curl -fsSL "$RAW/sql/migrations/002_add_workflow_runs.sql" -o /tmp/m002.sql || { echo "ERROR: failed to download migration 002"; exit 1; }
-docker exec -i supabase-db psql -U postgres -d postgres < /tmp/m002.sql && echo "Migration 002: OK" || echo "WARNING: migration 002 may already be applied"
+echo "$MIGRATION_002_SHA256  /tmp/m002.sql" | sha256sum -c -
+docker exec -i supabase-db psql -v ON_ERROR_STOP=1 -X -U postgres -d postgres < /tmp/m002.sql
+echo "Migration 002: OK"
 
 # --- Final verification ---
 echo ""

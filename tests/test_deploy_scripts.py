@@ -107,6 +107,12 @@ def test_vps_harden_script_uses_actual_supavisor_service_name():
     assert "docker compose up -d supavisor" in script
     assert "docker compose up -d supabase-pooler" in script
     assert "python3 -m pip install" not in script
+    assert "COMMIT_SHA=" in script
+    assert "sha256sum -c -" in script
+    assert "grep -E ':(5432|6543)\\b'" in script
+    assert "0.0.0.0" not in script
+    assert "ON_ERROR_STOP=1" in script
+    assert "WARNING: migration 002 may already be applied" not in script
 
 
 @pytest.mark.parametrize(
