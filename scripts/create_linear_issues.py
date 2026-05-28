@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create ANTS-001 to ANTS-007 baseline issues in Linear via GraphQL API.
+Create ANTS baseline issues in Linear via GraphQL API.
 
 Usage:
   LINEAR_API_KEY=lin_api_xxx python3 create_linear_issues.py [--dry-run] [--team-id TEAM_ID]
@@ -220,6 +220,121 @@ Publishing `ants-ai-gateway` publicly enables CodeRabbit, GitHub programs, and o
 ## Definition of Done
 - Opportunity list is current enough to act on.
 - Publication blockers are explicit.
+""",
+    },
+    {
+        "title": "ANTS-008 n8n Gateway Preflight Integration",
+        "description": """## Goal
+Harden production n8n workflows by routing all model execution nodes through the gateway's `/preflight` endpoint before calling any provider API.
+
+## Context
+Phase 4 of the ANTS roadmap. All active n8n canvases (Mercado Público alerts, CV/LinkedIn) must enforce token budgets and model policies via the gateway before making LLM calls.
+
+## Acceptance Criteria
+- Active n8n workflows call `POST /preflight` via HTTP Request node before any model call.
+- Blocked preflight responses are routed to a human review or summarization path.
+- Safe payload schemas are validated against gateway contract.
+
+## Technical Constraints
+- n8n server: n8n.fullants.com (external, separate from VPS).
+- Auth: `X-ANTS-API-Key` header required on all gateway calls.
+- No direct Postgres access from n8n (ADR-0002 and ADR-0003 enforced).
+
+## Files likely affected
+- n8n canvas JSON exports in `ants-ops/n8n-workflows/`
+- `app/services/preflight_service.py`
+
+## Test or Harness
+- Smoke test: n8n HTTP Request node calls `/preflight` and receives valid JSON.
+- Blocked preflight returns `allowed: false` and n8n routes to fallback path.
+
+## Definition of Done
+- At least one production n8n canvas has preflight integrated.
+- Evidence (n8n execution log) attached to this issue.
+- No n8n workflow calls a model provider directly without a prior preflight check.
+""",
+    },
+    {
+        "title": "ANTS-009 n8n Secure DB Integration via Gateway (Option B)",
+        "description": """## Goal
+Replace all direct Postgres connections from n8n with secure HTTPS gateway endpoints, completing the Option B architecture defined in ADR-0003.
+
+## Context
+**COMPLETED (2026-05-28):** The two core endpoints are live in production.
+
+### Endpoints Delivered
+- `POST /n8n/claim-candidates` — atomically claims unclaimed shortlisted/proposal candidates from `noco_mvp_opportunity_workbench` into `mp_proposal_candidate_intake`.
+- `POST /n8n/update-intake` — updates orchestration status (`queued`, `handoff_created`, `analysis_started`, `completed`, `failed`) per `external_tender_id`.
+
+### SQL Migration Applied
+- `ants-ops/sql/010_mp_proposal_candidate_intake.sql` — table + NocoDB view + RLS + trigger.
+
+### Architecture Decision
+- ADR-0003 set to **Accepted** — Option B (gateway endpoints) is the definitive standard.
+- Options A (Kong REST exposure) and C (iptables port whitelist) formally discarded.
+- Port 5432 remains fully isolated (ADR-0002 maintained).
+
+## Acceptance Criteria
+- [x] `POST /n8n/claim-candidates` returns candidate list with `claimed_count`.
+- [x] `POST /n8n/update-intake` updates `mp_proposal_candidate_intake` status.
+- [x] n8n workflow `mp-proposal-candidate-intake.json` updated to use HTTP Request nodes.
+- [x] All 112 gateway tests pass.
+- [x] Deployed to production VPS.
+
+## Commit Reference
+`840671b` — feat(n8n): add claim-candidates, update-intake, ingest endpoints and markitdown
+
+## GitHub Issue
+https://github.com/mhgutie/ants-ai-gateway/issues/7
+""",
+    },
+    {
+        "title": "ANTS-010 Markitdown Universal Document Ingestion Endpoint",
+        "description": """## Goal
+Add a universal document-to-markdown conversion endpoint to the ANTS AI Gateway, enabling any agent or n8n workflow to convert files and URLs into clean markdown before passing them to LLMs.
+
+## Context
+**COMPLETED (2026-05-28):** Endpoint is live in production.
+
+### Endpoint Delivered
+`POST /ingest/convert` (multipart form data)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | UploadFile | PDF, DOCX, XLSX, XLS, PPTX, MSG, HTML, CSV, JSON, XML, ZIP |
+| `url` | string (form) | Any public URL or web page |
+
+Response:
+```json
+{
+  "markdown": "# Title\\n\\nContent...",
+  "title": "Extracted document title",
+  "source_type": "pdf",
+  "char_count": 4821,
+  "conversion_time_ms": 312
+}
+```
+
+### Dependencies Added
+- `markitdown[pptx,docx,xlsx,xls,pdf,outlook]==0.1.6`
+- `python-multipart>=0.0.19`
+
+### Why These Extras (Not `[all]`)
+The `[all]` extra includes audio transcription (SpeechRecognition, pydub) requiring system `ffmpeg`. The targeted extras cover all ANTS document use cases without system-level dependencies.
+
+## Acceptance Criteria
+- [x] File upload converts any supported format to markdown.
+- [x] URL ingestion fetches and converts web content.
+- [x] Missing input returns 422.
+- [x] Endpoint requires `X-ANTS-API-Key`.
+- [x] 4 tests passing in `tests/test_ingest.py`.
+- [x] Deployed to production VPS.
+
+## Commit Reference
+`840671b` — feat(n8n): add claim-candidates, update-intake, ingest endpoints and markitdown
+
+## GitHub Issue
+https://github.com/mhgutie/ants-ai-gateway/issues/6
 """,
     },
 ]
