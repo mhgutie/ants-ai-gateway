@@ -605,3 +605,157 @@ async def log_agent_handoff(payload: dict[str, Any]) -> bool:
         logger.warning(f"Error logging agent handoff in DB: {exc}. Saving to mock store.")
         MOCK_STORE["agent_handoffs"].insert(0, payload)
         return True
+
+
+async def claim_proposal_candidates(n8n_workflow_id: str | None = None, n8n_execution_id: str | None = None, run_id: str | None = None) -> list[dict[str, Any]]:
+    """Claims unclaimed shortlisted or proposal candidates and registers them in the intake queue.
+
+    Args:
+        n8n_workflow_id: The active n8n workflow ID that is claiming the candidates.
+        n8n_execution_id: The active n8n execution ID.
+        run_id: The workflow run logging ID.
+
+    Returns:
+        A list of dictionaries representing the claimed opportunity records.
+    """
+    now = datetime.now()
+    workflow_id = n8n_workflow_id or ""
+    execution_id = n8n_execution_id or ""
+    workflow_run_id = run_id or ""
+
+    try:
+        async with db_connection() as conn:
+            if conn is None:
+                # Return empty list in mock mode
+                return []
+
+            # 1. Fetch unclaimed or failed candidates from the opportunity workbench joined with intake
+            # We fetch those where intake_status is NULL (not claimed) or 'failed' (retriable)
+            unclaimed = await conn.fetch(
+                """
+                select
+                  w.external_tender_id,
+                  w.title,
+                  w.buyer_name,
+                  w.category,
+                  w.opportunity_score,
+                  w.triage_score,
+                  w.closing_at,
+                  w.estimated_budget,
+                  w.currency,
+                  w.source_url,
+                  w.tender_tags,
+                  w.tender_decision_status,
+                  w.tender_priority,
+                  w.tender_next_action,
+                  w.tender_reviewer_notes,
+                  w.tender_recommended_action,
+                  w.selected_workflow_count,
+                  w.selected_workflows,
+                  w.mapped_occupation_count,
+                  w.mapped_occupations,
+                  w.pipeline_score,
+                  w.next_pipeline_stage
+                from public.noco_mvp_opportunity_workbench w
+                left join public.mp_proposal_candidate_intake i
+                  on i.external_tender_id = w.external_tender_id
+                where w.tender_decision_status in ('shortlisted', 'proposal_candidate')
+                  and (i.intake_status is null or i.intake_status = 'failed')
+                order by w.tender_priority asc, w.pipeline_score desc, w.closing_at asc nulls last
+                """
+            )
+
+            if not unclaimed:
+                return []
+
+            # 2. Ingest claimed rows into mp_proposal_candidate_intake with status 'queued'
+            claimed_records = []
+            for r in unclaimed:
+                tender_id = r["external_tender_id"]
+                decision = r["tender_decision_status"]
+                priority = r["tender_priority"] or 2
+                score = r["pipeline_score"] or 0
+                stage = r["next_pipeline_stage"] or ""
+
+                await conn.execute(
+                    """
+                    insert into public.mp_proposal_candidate_intake (
+                      external_tender_id, decision_status, priority, pipeline_score, next_pipeline_stage,
+                      intake_status, last_workflow_run_id, n8n_workflow_id, n8n_execution_id, claimed_at, updated_at
+                    )
+                    values ($1, $2, $3, $4, $5, 'queued', $6, $7, $8, $9, $9)
+                    on conflict (external_tender_id) do update set
+                      decision_status = excluded.decision_status,
+                      priority = excluded.priority,
+                      pipeline_score = excluded.pipeline_score,
+                      next_pipeline_stage = excluded.next_pipeline_stage,
+                      intake_status = 'queued',
+                      last_workflow_run_id = excluded.last_workflow_run_id,
+                      n8n_workflow_id = excluded.n8n_workflow_id,
+                      n8n_execution_id = excluded.n8n_execution_id,
+                      claimed_at = excluded.claimed_at,
+                      updated_at = excluded.updated_at
+                    """,
+                    tender_id, decision, priority, score, stage, workflow_run_id, workflow_id, execution_id, now
+                )
+                claimed_records.append(to_dict(r))
+
+            return claimed_records
+    except Exception as exc:
+        logger.warning(f"Error claiming proposal candidates in DB: {exc}")
+        return []
+
+
+async def update_proposal_intake(
+    external_tender_id: str,
+    intake_status: str,
+    error_message: str | None = None,
+    run_id: str | None = None,
+    n8n_workflow_id: str | None = None,
+    n8n_execution_id: str | None = None
+) -> bool:
+    """Updates the orchestration intake status of a claimed opportunity candidate in Supabase.
+
+    Args:
+        external_tender_id: The unique external Mercado Público tender ID.
+        intake_status: The new status ('queued', 'handoff_created', 'analysis_started', 'completed', 'failed').
+        error_message: Optional error diagnostics if status is 'failed'.
+        run_id: The associated workflow run ID.
+        n8n_workflow_id: The active n8n workflow ID.
+        n8n_execution_id: The active n8n execution ID.
+
+    Returns:
+        True if the update was successful, False otherwise.
+    """
+    now = datetime.now()
+    error_msg = error_message or ""
+    workflow_run_id = run_id or ""
+    workflow_id = n8n_workflow_id or ""
+    exec_id = n8n_execution_id or ""
+
+    try:
+        async with db_connection() as conn:
+            if conn is None:
+                return True
+
+            await conn.execute(
+                """
+                update public.mp_proposal_candidate_intake
+                set
+                  intake_status = $2,
+                  error_message = case when $3 <> '' then $3 else error_message end,
+                  last_workflow_run_id = case when $4 <> '' then $4 else last_workflow_run_id end,
+                  n8n_workflow_id = case when $5 <> '' then $5 else n8n_workflow_id end,
+                  n8n_execution_id = case when $6 <> '' then $6 else n8n_execution_id end,
+                  handoff_created_at = case when $2 = 'handoff_created' then $7 else handoff_created_at end,
+                  completed_at = case when $2 = 'completed' then $7 else completed_at end,
+                  updated_at = $7
+                where external_tender_id = $1
+                """,
+                external_tender_id, intake_status, error_msg, workflow_run_id, workflow_id, exec_id, now
+            )
+            return True
+    except Exception as exc:
+        logger.warning(f"Error updating proposal candidate intake status in DB: {exc}")
+        return False
+

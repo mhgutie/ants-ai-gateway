@@ -7,3 +7,5 @@ asyncpg==0.30.0
 cryptography==44.0.0
 pytest==8.3.4
 pytest-asyncio==0.25.2
+markitdown[pptx,docx,xlsx,xls,pdf,outlook]==0.1.6
+python-multipart>=0.0.19

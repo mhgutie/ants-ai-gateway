@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -32,6 +33,7 @@ from app.schemas import (
     GitHubRepositoryCreateRequest,
     GitHubRepositoryCreateResponse,
     ExecutorSessionsResponse,
+    IngestConvertResponse,
     PreflightRequest,
     PreflightResponse,
     ToolExecutorsResponse,
@@ -39,7 +41,13 @@ from app.schemas import (
     WorkflowRunLogResponse,
     UsageLogRequest,
     UsageLogResponse,
+    N8nClaimCandidatesRequest,
+    N8nClaimCandidatesResponse,
+    N8nUpdateIntakeRequest,
+    N8nUpdateIntakeResponse,
 )
+from app.services.ingest_service import convert_bytes as ingest_convert_bytes
+from app.services.ingest_service import convert_url as ingest_convert_url
 from app.services.preflight_service import run_preflight
 from app.services.usage_logger import log_usage
 from app.executor_smoke import run_executor_smoke
@@ -55,7 +63,10 @@ from app.db_queries import (
     log_agent_handoff,
     log_artifact,
     log_workflow_run,
+    claim_proposal_candidates,
+    update_proposal_intake,
 )
+
 
 app = FastAPI(title="ANTS AI Gateway", version="0.1.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -289,6 +300,44 @@ async def n8n_handoff(request: AgentHandoffLogRequest) -> AgentHandoffLogRespons
     )
 
 
+@app.post(
+    "/n8n/claim-candidates",
+    response_model=N8nClaimCandidatesResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def n8n_claim_candidates(request: N8nClaimCandidatesRequest) -> N8nClaimCandidatesResponse:
+    candidates = await claim_proposal_candidates(
+        n8n_workflow_id=request.n8n_workflow_id,
+        n8n_execution_id=request.n8n_execution_id,
+        run_id=request.run_id,
+    )
+    return N8nClaimCandidatesResponse(claimed_count=len(candidates), candidates=candidates)
+
+
+@app.post(
+    "/n8n/update-intake",
+    response_model=N8nUpdateIntakeResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def n8n_update_intake(request: N8nUpdateIntakeRequest) -> N8nUpdateIntakeResponse:
+    success = await update_proposal_intake(
+        external_tender_id=request.external_tender_id,
+        intake_status=request.intake_status,
+        error_message=request.error_message,
+        run_id=request.run_id,
+        n8n_workflow_id=request.n8n_workflow_id,
+        n8n_execution_id=request.n8n_execution_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update candidate intake status.")
+    return N8nUpdateIntakeResponse(
+        success=success,
+        external_tender_id=request.external_tender_id,
+        intake_status=request.intake_status,
+    )
+
+
+
 @app.get("/api/dashboard-stats", dependencies=[Depends(require_gateway_api_key)])
 async def api_dashboard_stats() -> dict:
     return await get_dashboard_stats()
@@ -345,3 +394,24 @@ async def api_tasks() -> dict:
 @app.get("/api/usage-logs", dependencies=[Depends(require_gateway_api_key)])
 async def api_usage_logs() -> dict:
     return {"logs": await get_usage_logs()}
+
+
+@app.post(
+    "/ingest/convert",
+    response_model=IngestConvertResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def ingest_convert(
+    file: UploadFile | None = File(default=None),
+    url: str | None = Form(default=None),
+) -> IngestConvertResponse:
+    if file is not None:
+        content = await file.read()
+        data = await asyncio.to_thread(
+            ingest_convert_bytes, content, file.filename or "upload.bin"
+        )
+    elif url:
+        data = await asyncio.to_thread(ingest_convert_url, url)
+    else:
+        raise HTTPException(status_code=422, detail="Provide either 'file' or 'url'.")
+    return IngestConvertResponse(**data)

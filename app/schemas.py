@@ -322,3 +322,38 @@ class GitHubRepositoryCreateResponse(BaseModel):
     default_branch: str | None = None
     api_endpoint: str
     reason: str
+
+
+class IngestConvertResponse(BaseModel):
+    markdown: str
+    title: str | None = None
+    source_type: str
+    char_count: int
+    conversion_time_ms: int
+
+
+class N8nClaimCandidatesRequest(BaseModel):
+    n8n_workflow_id: str | None = None
+    n8n_execution_id: str | None = None
+    run_id: str | None = None
+
+
+class N8nClaimCandidatesResponse(BaseModel):
+    claimed_count: int
+    candidates: list[dict[str, Any]]
+
+
+class N8nUpdateIntakeRequest(BaseModel):
+    external_tender_id: str
+    intake_status: str
+    error_message: str | None = None
+    run_id: str | None = None
+    n8n_workflow_id: str | None = None
+    n8n_execution_id: str | None = None
+
+
+class N8nUpdateIntakeResponse(BaseModel):
+    success: bool
+    external_tender_id: str
+    intake_status: str
+
