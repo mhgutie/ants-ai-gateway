@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Any
 
 from app.db import db_connection
@@ -132,7 +133,12 @@ async def query_chunks(
 
             vec_str = "[" + ",".join(str(v) for v in query_vec) + "]"
 
-            filters = [f"1 - (embedding <=> $1::vector) >= {threshold}"]
+            # Exclude stored zero-norm embeddings: pgvector returns NaN for cosine
+            # distance on zero vectors; cast to text to detect and skip them.
+            filters = [
+                "(embedding <=> embedding)::text != 'NaN'",
+                f"1 - (embedding <=> $1::vector) >= {threshold}",
+            ]
             args: list[Any] = [vec_str, top_k]
             arg_idx = 3
 
@@ -162,17 +168,19 @@ async def query_chunks(
             """
 
             rows = await conn.fetch(sql, *args)
-            results = [
-                {
+            results = []
+            for r in rows:
+                score = float(r["score"])
+                if math.isnan(score) or math.isinf(score):
+                    continue
+                results.append({
                     "document_id": r["document_id"],
                     "title": r["title"],
                     "chunk_index": r["chunk_index"],
                     "content": r["content"],
-                    "score": float(r["score"]),
+                    "score": round(score, 6),
                     "metadata": r["metadata"] if isinstance(r["metadata"], dict) else {},
-                }
-                for r in rows
-            ]
+                })
             return {
                 "query": query,
                 "results": results,
