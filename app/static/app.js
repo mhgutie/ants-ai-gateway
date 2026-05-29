@@ -273,6 +273,134 @@ function bindTabs() {
 }
 
 /* ==========================================================================
+   Tab Controller: Propuestas MP — RAG + Proposal Generator
+   ========================================================================== */
+
+function renderMarkdown(md) {
+  if (!md) return "";
+  return md
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/^---+$/gm, "<hr>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
+    .replace(/\n{2,}/g, "</p><p>")
+    .replace(/^(?!<[hul]|<hr)(.+)$/gm, (m) => m.startsWith("<") ? m : m)
+    .replace(/\n/g, "<br>");
+}
+
+function initProposalGenerator() {
+  const form = $("proposal-form");
+  const submitBtn = $("prop-submit-btn");
+  const resetBtn = $("prop-reset-btn");
+  const copyBtn = $("prop-copy-btn");
+
+  resetBtn.addEventListener("click", () => {
+    form.reset();
+    $("prop-output").innerHTML = `<p class="empty-state">Completa el formulario y haz clic en <strong>Generar Propuesta</strong>.</p>`;
+    $("prop-status-pill").textContent = "Listo";
+    $("prop-status-pill").className = "pill";
+    $("prop-meta-badge").classList.add("hidden");
+    $("prop-rag-panel").style.display = "none";
+    copyBtn.style.display = "none";
+    $("prop-spinner").classList.add("hidden");
+  });
+
+  copyBtn.addEventListener("click", () => {
+    const text = $("prop-output").innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = "Copiado ✓";
+      setTimeout(() => { copyBtn.textContent = "Copiar"; }, 2000);
+    });
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const title = $("prop-title").value.trim();
+    const description = $("prop-description").value.trim();
+    if (!title || !description) return;
+
+    const licitacionId = $("prop-licitacion-id").value.trim() || `lic-${Date.now()}`;
+    const topK = parseInt($("prop-top-k").value) || 5;
+    const threshold = parseFloat($("prop-threshold").value) || 0.45;
+
+    // UI loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Generando...";
+    $("prop-spinner").classList.remove("hidden");
+    $("prop-output").innerHTML = "";
+    $("prop-status-pill").textContent = "Procesando";
+    $("prop-status-pill").className = "pill warn";
+    $("prop-meta-badge").classList.add("hidden");
+    $("prop-rag-panel").style.display = "none";
+    copyBtn.style.display = "none";
+
+    try {
+      const result = await request("/proposal/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          licitacion_id: licitacionId,
+          title,
+          description,
+          top_k: topK,
+          rag_threshold: threshold,
+        }),
+      });
+
+      // Meta badge
+      $("prop-meta-model").textContent = result.model_used || "-";
+      $("prop-meta-cost").textContent = result.real_cost_usd != null
+        ? `$${Number(result.real_cost_usd).toFixed(5)}`
+        : result.estimated_cost_usd != null ? `~$${Number(result.estimated_cost_usd).toFixed(5)}` : "$0.00";
+      $("prop-meta-rag").textContent = `${result.rag_total} workflows`;
+      $("prop-meta-reason").textContent = result.reason || "";
+      $("prop-meta-badge").classList.remove("hidden");
+
+      // RAG matches
+      const matches = result.rag_matches || [];
+      if (matches.length > 0) {
+        $("prop-rag-count").textContent = `${matches.length} match${matches.length !== 1 ? "es" : ""}`;
+        $("prop-rag-list").innerHTML = matches.map((m, i) => `
+          <div class="rag-match-item">
+            <div class="rag-match-header">
+              <span class="rag-match-rank">#${i + 1}</span>
+              <strong class="rag-match-title">${escapeHtml(m.title || m.document_id)}</strong>
+              <span class="pill ok rag-match-score">${Math.round(m.score * 100)}%</span>
+            </div>
+            <p class="rag-match-content">${escapeHtml((m.content || "").substring(0, 200))}${m.content && m.content.length > 200 ? "…" : ""}</p>
+          </div>
+        `).join("");
+        $("prop-rag-panel").style.display = "";
+      }
+
+      // Proposal text
+      const proposalHtml = renderMarkdown(result.proposal_text || "");
+      $("prop-output").innerHTML = proposalHtml
+        ? `<div class="proposal-body">${proposalHtml}</div>`
+        : `<p class="empty-state">Propuesta vacía.</p>`;
+
+      $("prop-status-pill").textContent = result.allowed ? "Generada" : "Bloqueada";
+      $("prop-status-pill").className = `pill ${result.allowed ? "ok" : "error"}`;
+      copyBtn.style.display = "";
+
+    } catch (err) {
+      $("prop-output").innerHTML = `<div class="message-bubble assistant error" style="background:var(--error-bg);border-color:var(--error)">Error: ${escapeHtml(err.message)}</div>`;
+      $("prop-status-pill").textContent = "Error";
+      $("prop-status-pill").className = "pill error";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Generar Propuesta";
+      $("prop-spinner").classList.add("hidden");
+    }
+  });
+}
+
+/* ==========================================================================
    Tab Controller: Agent Workspace (Intake & Chat)
    ========================================================================== */
 function setStepActive(stepNum) {
@@ -1406,6 +1534,7 @@ async function init() {
   initSpecBuilder();
   initSmokeTest();
   initN8nAnalyzer();
+  initProposalGenerator();
   initGoogleAuth();
   initFileUpload();
   bindTabs();

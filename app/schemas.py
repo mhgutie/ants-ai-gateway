@@ -462,3 +462,39 @@ class RagQueryResponse(BaseModel):
     embedding_model: str
     source: str
 
+
+# ---------------------------------------------------------------------------
+# Phase 7: Commercial Pipeline — Proposal Generator
+# ---------------------------------------------------------------------------
+
+class ProposalGenerateRequest(BaseModel):
+    licitacion_id: str
+    title: str
+    description: str
+    project_id: str | None = None
+    account_id: str | None = None
+    top_k: int = Field(default=5, ge=1, le=10)
+    rag_threshold: float = Field(default=0.45, ge=0.0, le=1.0)
+    explicitly_authorized: bool = False
+
+
+class ProposalRagMatch(BaseModel):
+    document_id: str
+    title: str | None
+    score: float
+    content: str
+    metadata: dict[str, Any]
+
+
+class ProposalGenerateResponse(BaseModel):
+    licitacion_id: str
+    spec_id: str
+    proposal_text: str
+    rag_matches: list[ProposalRagMatch]
+    rag_total: int
+    model_used: str
+    estimated_cost_usd: float | None
+    real_cost_usd: float | None
+    allowed: bool
+    reason: str
+
