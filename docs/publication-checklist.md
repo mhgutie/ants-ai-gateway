@@ -23,6 +23,14 @@ Do not publish the parent `appmultiANTS` directory yet because it contains local
 - [ ] Create initial Linear issue `ANTS-001 Gateway baseline`.
 - [ ] Open the baseline PR with validation evidence.
 
+## Current Publication Status
+
+- [x] Public repository created at `mhgutie/ants-ai-gateway`.
+- [x] Baseline `main` branch pushed from isolated publication repository.
+- [x] Publication notes added in `docs/publication-notes.md`.
+- [ ] CodeRabbit enabled for the repository.
+- [ ] First PR reviewed by CodeRabbit.
+
 ## Suggested Baseline Commands
 
 Use these commands from a clean location, not from `C:\Users\EQUIPO`:
