@@ -357,3 +357,62 @@ class N8nUpdateIntakeResponse(BaseModel):
     external_tender_id: str
     intake_status: str
 
+
+# ---------------------------------------------------------------------------
+# Phase 5: Spec Builder + Harness Engine
+# ---------------------------------------------------------------------------
+
+class SpecBuildRequest(BaseModel):
+    project_id: str | None = None
+    task_id: str | None = None
+    project_name: str
+    user_request: str
+    task_type: TaskType = TaskType.product_design
+    context_scope: ContextScope = ContextScope.limited
+    explicitly_authorized: bool = False
+    account_id: str | None = None
+
+
+class SpecBuildResponse(BaseModel):
+    spec_id: str
+    spec: dict[str, Any]
+    model_used: str
+    estimated_cost_usd: float
+    real_cost_usd: float | None
+    allowed: bool
+    reason: str
+
+
+class HarnessValidateRequest(BaseModel):
+    spec_id: str | None = None
+    spec_inline: dict[str, Any] | None = None
+    generated_output: str
+    project_id: str | None = None
+    task_id: str | None = None
+    explicitly_authorized: bool = False
+    account_id: str | None = None
+
+
+class HarnessVerdict(str, Enum):
+    approved = "approved"
+    needs_revision = "needs_revision"
+    rejected = "rejected"
+
+
+class HarnessCriterionResult(BaseModel):
+    criterion: str
+    passed: bool
+    notes: str
+
+
+class HarnessValidateResponse(BaseModel):
+    passed: bool
+    score: int
+    verdict: HarnessVerdict
+    findings: str
+    criteria_results: list[HarnessCriterionResult]
+    model_used: str
+    estimated_cost_usd: float
+    real_cost_usd: float | None
+    spec_id: str | None
+
