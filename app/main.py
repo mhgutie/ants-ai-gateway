@@ -53,7 +53,10 @@ from app.schemas import (
     RagIndexResponse,
     RagQueryRequest,
     RagQueryResponse,
+    ProposalGenerateRequest,
+    ProposalGenerateResponse,
 )
+from app.services.proposal_service import generate_proposal
 from app.services.ingest_service import convert_bytes as ingest_convert_bytes
 from app.services.ingest_service import convert_url as ingest_convert_url
 from app.services.preflight_service import run_preflight
@@ -489,3 +492,16 @@ async def rag_query(request: RagQueryRequest) -> RagQueryResponse:
         document_ids=request.document_ids,
     )
     return RagQueryResponse(**result)
+
+
+# ---------------------------------------------------------------------------
+# Phase 7: Commercial Pipeline — Proposal Generator
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/proposal/generate",
+    response_model=ProposalGenerateResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def proposal_generate(request: ProposalGenerateRequest) -> ProposalGenerateResponse:
+    return await generate_proposal(request)
