@@ -498,6 +498,20 @@ async def rag_query(request: RagQueryRequest) -> RagQueryResponse:
 # Phase 7: Commercial Pipeline — Proposal Generator
 # ---------------------------------------------------------------------------
 
+@app.get("/proposal/ping")
+async def proposal_ping() -> dict:
+    """Public health check — confirms proposal service is loaded and RAG is reachable."""
+    from app.services.proposal_service import _PROPOSAL_MODEL, _PROPOSAL_TASK_TYPE
+    db = await db_status()
+    return {
+        "status": "ok",
+        "endpoint": "/proposal/generate",
+        "model": _PROPOSAL_MODEL,
+        "task_type": str(_PROPOSAL_TASK_TYPE),
+        "rag_backend": db.get("status", "unknown"),
+    }
+
+
 @app.post(
     "/proposal/generate",
     response_model=ProposalGenerateResponse,
