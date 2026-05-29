@@ -49,6 +49,10 @@ from app.schemas import (
     SpecBuildResponse,
     HarnessValidateRequest,
     HarnessValidateResponse,
+    RagIndexRequest,
+    RagIndexResponse,
+    RagQueryRequest,
+    RagQueryResponse,
 )
 from app.services.ingest_service import convert_bytes as ingest_convert_bytes
 from app.services.ingest_service import convert_url as ingest_convert_url
@@ -56,6 +60,7 @@ from app.services.preflight_service import run_preflight
 from app.services.usage_logger import log_usage
 from app.services.spec_builder_service import build_spec
 from app.services.harness_service import validate_output
+from app.services.rag_service import index_document, query_chunks
 from app.executor_smoke import run_executor_smoke
 from app.tool_executors import list_executor_sessions, list_tool_executor_statuses
 from app.db_queries import (
@@ -446,3 +451,41 @@ async def spec_build(request: SpecBuildRequest) -> SpecBuildResponse:
 )
 async def harness_validate(request: HarnessValidateRequest) -> HarnessValidateResponse:
     return await validate_output(request, get_spec_fn=get_specs)
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: RAG + Document Services
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/rag/index",
+    response_model=RagIndexResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def rag_index(request: RagIndexRequest) -> RagIndexResponse:
+    result = await index_document(
+        document_id=request.document_id,
+        content=request.content,
+        title=request.title,
+        project_id=request.project_id,
+        metadata=request.metadata,
+        chunk_size=request.chunk_size,
+        chunk_overlap=request.chunk_overlap,
+    )
+    return RagIndexResponse(**result)
+
+
+@app.post(
+    "/rag/query",
+    response_model=RagQueryResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def rag_query(request: RagQueryRequest) -> RagQueryResponse:
+    result = await query_chunks(
+        query=request.query,
+        project_id=request.project_id,
+        top_k=request.top_k,
+        threshold=request.threshold,
+        document_ids=request.document_ids,
+    )
+    return RagQueryResponse(**result)
