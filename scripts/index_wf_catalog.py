@@ -170,7 +170,11 @@ async def run(args: argparse.Namespace) -> None:
         texts = [d[2] for d in batch]
 
         logger.info("Batch %d-%d: embedding...", batch_start + 1, batch_start + len(batch))
-        embeddings = await embed_batch(texts, openai_key)
+        try:
+            embeddings = await embed_batch(texts, openai_key)
+        except Exception as exc:
+            logger.error("Batch %d-%d failed: %s — skipping.", batch_start + 1, batch_start + len(batch), exc)
+            continue
 
         # Bulk insert
         records = []
@@ -206,7 +210,7 @@ async def run(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Index wf_solution_catalog into RAG document_chunks")
     parser.add_argument("--dry-run", action="store_true", help="Print sample doc text, skip embedding and DB writes")
-    parser.add_argument("--batch-size", type=int, default=2000, help="Texts per OpenAI API call (max 2048)")
+    parser.add_argument("--batch-size", type=int, default=400, help="Texts per OpenAI API call — keep under 300K tokens total (~400 for wf_catalog)")
     parser.add_argument("--limit", type=int, default=0, help="Max workflows to index (0 = all)")
     args = parser.parse_args()
     asyncio.run(run(args))
