@@ -70,6 +70,7 @@
       <!-- Main Navigation Tabs -->
       <nav class="navigation-tabs" aria-label="ANTS Views">
         <button class="nav-tab active" data-tab="workspace">Agent Workspace</button>
+        <button class="nav-tab" data-tab="proposals">Propuestas MP</button>
         <button class="nav-tab admin-only hidden" data-tab="dashboard">Dashboard</button>
         <button class="nav-tab admin-only hidden" data-tab="specs">Spec Builder</button>
         <button class="nav-tab admin-only hidden" data-tab="operator">Operator Tools</button>
@@ -275,6 +276,101 @@
                   <p><strong>Structured Findings:</strong></p>
                   <pre id="harness-findings" class="code-block"></pre>
                 </div>
+              </div>
+            </section>
+
+          </div>
+        </article>
+
+        <!-- Tab: Propuestas MP -->
+        <article id="tab-proposals" class="tab-panel">
+          <div class="proposals-grid">
+
+            <!-- Left: Input Form -->
+            <div class="stack">
+              <section class="panel glass-panel">
+                <div class="panel-head border-bottom">
+                  <div class="panel-title">
+                    <span class="pill ok">RAG + LLM</span>
+                    <h2>Generador de Propuestas MP</h2>
+                  </div>
+                </div>
+                <form id="proposal-form" class="stack">
+                  <label>
+                    <span>ID Licitación <span class="field-hint">(opcional)</span></span>
+                    <input id="prop-licitacion-id" type="text" placeholder="Ej: 1234567-8-LP24" />
+                  </label>
+                  <label>
+                    <span>Título de la Licitación <span class="field-hint">*</span></span>
+                    <input id="prop-title" type="text" placeholder="Ej: Servicio de digitalización y gestión documental" required />
+                  </label>
+                  <label>
+                    <span>Descripción / Bases <span class="field-hint">*</span></span>
+                    <textarea id="prop-description" rows="8" placeholder="Pega aquí el texto de las bases, descripción técnica o requerimiento principal..." required></textarea>
+                  </label>
+                  <details class="advanced-options">
+                    <summary>Opciones avanzadas</summary>
+                    <div class="form-row-2" style="margin-top:12px">
+                      <label>
+                        Workflows a recuperar (top_k)
+                        <input id="prop-top-k" type="number" min="1" max="10" value="5" />
+                      </label>
+                      <label>
+                        Umbral de similitud (0–1)
+                        <input id="prop-threshold" type="number" min="0" max="1" step="0.05" value="0.45" />
+                      </label>
+                    </div>
+                  </details>
+                  <div class="form-actions">
+                    <button type="submit" class="btn primary-btn" id="prop-submit-btn">Generar Propuesta</button>
+                    <button type="button" class="btn secondary" id="prop-reset-btn">Limpiar</button>
+                  </div>
+                </form>
+              </section>
+
+              <!-- RAG Matches -->
+              <section class="panel glass-panel" id="prop-rag-panel" style="display:none">
+                <div class="panel-head border-bottom">
+                  <div class="panel-title">
+                    <span class="pill highlight" id="prop-rag-count">0 matches</span>
+                    <h2>Workflows Relevantes (RAG)</h2>
+                  </div>
+                </div>
+                <div id="prop-rag-list" class="rag-match-list stack"></div>
+              </section>
+            </div>
+
+            <!-- Right: Proposal Output -->
+            <section class="panel glass-panel flex-panel" id="prop-output-panel">
+              <div class="panel-head border-bottom">
+                <div class="panel-title">
+                  <span class="pill" id="prop-status-pill">Listo</span>
+                  <h2>Propuesta Generada</h2>
+                </div>
+                <button class="btn compact-btn secondary" id="prop-copy-btn" style="display:none">Copiar</button>
+              </div>
+
+              <!-- Meta badge -->
+              <div id="prop-meta-badge" class="routing-badge hidden">
+                <div class="routing-badge-main">
+                  <span id="prop-meta-model">-</span>
+                  <span id="prop-meta-cost" class="badge-accent">$0.00</span>
+                </div>
+                <div class="routing-badge-details">
+                  <span id="prop-meta-rag" class="pill ok">0 RAG</span>
+                  <span id="prop-meta-reason">-</span>
+                </div>
+              </div>
+
+              <!-- Spinner -->
+              <div id="prop-spinner" class="proposal-spinner hidden">
+                <div class="spinner-ring"></div>
+                <p>Consultando catálogo RAG y generando propuesta con Kimi K2.6...</p>
+              </div>
+
+              <!-- Proposal text output -->
+              <div id="prop-output" class="proposal-output">
+                <p class="empty-state">Completa el formulario y haz clic en <strong>Generar Propuesta</strong>.</p>
               </div>
             </section>
 
