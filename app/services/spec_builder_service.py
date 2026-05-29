@@ -7,13 +7,11 @@ import time
 from typing import Any
 from uuid import uuid4
 
-from app.config import get_settings
 from app.cost_calculator import real_cost_usd
 from app.model_router import provider_for
 from app.providers import get_provider_client
-from app.schemas import ContextScope, SpecBuildRequest, SpecBuildResponse, TaskType
+from app.schemas import ChatMessage, ContextScope, GatewayRequest, SpecBuildRequest, SpecBuildResponse, TaskType
 from app.services.preflight_service import run_preflight
-from app.schemas import GatewayRequest
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +89,8 @@ async def build_spec(request: SpecBuildRequest, db_create_spec_fn: Any) -> SpecB
         response = await provider.chat(
             model=_SPEC_BUILDER_MODEL,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                ChatMessage(role="system", content=_SYSTEM_PROMPT),
+                ChatMessage(role="user", content=user_prompt),
             ],
             max_tokens=preflight.max_output_tokens,
             account_id=request.account_id,
