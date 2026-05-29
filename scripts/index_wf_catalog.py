@@ -89,19 +89,27 @@ def build_document_text(row: dict) -> str:
     return "\n".join(p for p in parts if p.strip())
 
 
-async def embed_batch(texts: list[str], api_key: str) -> list[list[float]]:
-    """Call OpenAI embeddings API for a batch of texts."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(
-            OPENAI_URL,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": EMBEDDING_MODEL, "input": texts, "dimensions": EMBEDDING_DIM, "encoding_format": "float"},
-        )
+async def embed_batch(texts: list[str], api_key: str, max_retries: int = 6) -> list[list[float]]:
+    """Call OpenAI embeddings API with exponential backoff on rate limits."""
+    delay = 15.0
+    for attempt in range(max_retries):
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                OPENAI_URL,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={"model": EMBEDDING_MODEL, "input": texts, "dimensions": EMBEDDING_DIM, "encoding_format": "float"},
+            )
+        if resp.status_code == 429:
+            logger.warning("  Rate limited (429). Waiting %.0fs before retry %d/%d...", delay, attempt + 1, max_retries)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 120)
+            continue
         resp.raise_for_status()
         data = sorted(resp.json()["data"], key=lambda x: x["index"])
         usage = resp.json().get("usage", {})
         logger.info("  Embedded %d texts — %s tokens used", len(texts), usage.get("total_tokens", "?"))
         return [item["embedding"] for item in data]
+    raise RuntimeError(f"Max retries ({max_retries}) exceeded for embedding batch of {len(texts)} texts.")
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -194,9 +202,10 @@ async def run(args: argparse.Namespace) -> None:
         elapsed = time.perf_counter() - t0
         logger.info("  Inserted %d chunks (total: %d) — %.1fs elapsed", len(records), total_inserted, elapsed)
 
-        # Respect OpenAI rate limits
+        # Respect OpenAI rate limits: ~200K tokens/batch, limit ~1M tokens/min
+        # 12s sleep → max 4 batches/min = ~800K tokens/min (safe margin)
         if batch_start + args.batch_size < len(docs):
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(12.0)
 
     elapsed = time.perf_counter() - t0
     logger.info("Done. %d chunks indexed in %.1fs.", total_inserted, elapsed)
