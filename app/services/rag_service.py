@@ -113,6 +113,18 @@ async def query_chunks(
     query_embeddings = await embed_texts([query])
     query_vec = query_embeddings[0]
 
+    # pgvector raises "zero norm in cosine similarity" for all-zero vectors.
+    # This happens when OPENAI_API_KEY is not configured. Return gracefully.
+    if all(v == 0.0 for v in query_vec):
+        return {
+            "query": query,
+            "results": [],
+            "total": 0,
+            "embedding_model": "text-embedding-3-small",
+            "source": "no_embeddings",
+            "reason": "OPENAI_API_KEY not configured — zero vector returned. Set the key to enable semantic search.",
+        }
+
     try:
         async with db_connection() as conn:
             if conn is None:
@@ -120,7 +132,7 @@ async def query_chunks(
 
             vec_str = "[" + ",".join(str(v) for v in query_vec) + "]"
 
-            filters = []
+            filters = [f"1 - (embedding <=> $1::vector) >= {threshold}"]
             args: list[Any] = [vec_str, top_k]
             arg_idx = 3
 
@@ -133,8 +145,7 @@ async def query_chunks(
                 args.append(document_ids)
                 arg_idx += 1
 
-            where = ("where " + " and ".join(filters)) if filters else ""
-            similarity_threshold = f"having 1 - (embedding <=> $1::vector) >= {threshold}"
+            where = "where " + " and ".join(filters)
 
             sql = f"""
             select
@@ -146,8 +157,6 @@ async def query_chunks(
                 1 - (embedding <=> $1::vector) as score
             from document_chunks
             {where}
-            group by document_id, title, chunk_index, content, metadata, embedding
-            {similarity_threshold}
             order by score desc
             limit $2
             """
