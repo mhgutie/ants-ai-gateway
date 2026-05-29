@@ -16,7 +16,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
           script: |
             set -e
             cd ${{ secrets.VPS_DEPLOY_PATH }}
@@ -24,3 +25,9 @@ jobs:
             docker compose up --build -d
             echo "Deploy completed: $(date)"
             docker ps --filter 'name=ants-ai-gateway' --format '{{.Names}} {{.Status}}'
+      - name: Smoke test /proposal/ping
+        run: |
+          sleep 15
+          response=$(curl -sf https://gateway.fullants.com/proposal/ping)
+          echo "Ping response: $response"
+          echo "$response" | grep -q '"status":"ok"' && echo "SMOKE TEST PASSED" || (echo "SMOKE TEST FAILED" && exit 1)
