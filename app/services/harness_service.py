@@ -136,8 +136,26 @@ async def validate_output(
             account_id=request.account_id,
         )
     except Exception as exc:
-        logger.warning("Harness provider call failed: %s", exc)
-        raise
+        logger.warning("Harness provider call failed: %s — returning needs_revision fallback.", exc)
+        fallback_results = [
+            HarnessCriterionResult(
+                criterion=c,
+                passed=False,
+                notes=f"Provider unavailable ({exc.__class__.__name__}). Manual review required.",
+            )
+            for c in criteria
+        ]
+        return HarnessValidateResponse(
+            passed=False,
+            score=60,
+            verdict=HarnessVerdict.needs_revision,
+            findings=f"Harness Engine provider ({_HARNESS_MODEL}) unavailable: {exc.__class__.__name__}. Configure API key for automated validation. Manual review required.",
+            criteria_results=fallback_results,
+            model_used=_HARNESS_MODEL,
+            estimated_cost_usd=preflight.estimated_cost_usd,
+            real_cost_usd=0.0,
+            spec_id=request.spec_id,
+        )
 
     actual_cost = real_cost_usd(
         _HARNESS_MODEL,

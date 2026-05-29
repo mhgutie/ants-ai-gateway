@@ -98,8 +98,39 @@ async def build_spec(request: SpecBuildRequest, db_create_spec_fn: Any) -> SpecB
             account_id=request.account_id,
         )
     except Exception as exc:
-        logger.warning("Spec builder provider call failed: %s", exc)
-        raise
+        logger.warning("Spec builder provider call failed: %s — using template spec.", exc)
+        spec_data = {
+            "title": request.project_name,
+            "problem": request.user_request[:300],
+            "expected_result": "See user request.",
+            "allowed_tools": ["run_command", "view_file", "write_to_file"],
+            "required_agents": [_SPEC_BUILDER_MODEL],
+            "acceptance_criteria": ["Solution addresses the stated problem.", "Output is complete and correct."],
+            "risks": [f"Provider unavailable: {exc.__class__.__name__}. Spec generated from template."],
+            "budget": {"max_total_cost_usd": 0.50, "max_iterations": 5},
+            "test_harness": {"type": "manual", "required_score": 80},
+        }
+        saved = await db_create_spec_fn(
+            project_id=request.project_id,
+            title=spec_data["title"],
+            problem=spec_data["problem"],
+            expected_result=spec_data["expected_result"],
+            allowed_tools=spec_data["allowed_tools"],
+            required_agents=spec_data["required_agents"],
+            acceptance_criteria=spec_data["acceptance_criteria"],
+            risks=spec_data["risks"],
+            budget=spec_data["budget"],
+            test_harness=spec_data["test_harness"],
+        )
+        return SpecBuildResponse(
+            spec_id=saved.get("id", ""),
+            spec=saved,
+            model_used=_SPEC_BUILDER_MODEL,
+            estimated_cost_usd=preflight.estimated_cost_usd,
+            real_cost_usd=0.0,
+            allowed=True,
+            reason=f"Provider unavailable — template spec generated. Configure {_SPEC_BUILDER_MODEL} API key for AI-generated specs.",
+        )
 
     latency_ms = int((time.perf_counter() - started) * 1000)
     actual_cost = real_cost_usd(
