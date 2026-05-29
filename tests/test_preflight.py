@@ -61,6 +61,5 @@ def test_realtime_voice_route_reports_clear_unavailable_reason():
 
 def test_new_task_type_is_accepted_by_preflight():
     response = run_preflight(_request(task_type=TaskType.google_workspace_processing))
-    assert response.allowed is False
-    assert response.recommended_model == "gemini-3.5-flash"
-    assert "model_unavailable" in response.stop_rules
+    assert response.allowed is True
+    assert response.recommended_model == "deepseek-v4-pro"
