@@ -76,7 +76,10 @@ app.mount("/ui/assets", StaticFiles(directory=STATIC_DIR), name="ants-ui-assets"
 
 @app.get("/ui", include_in_schema=False)
 async def operator_ui() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(
+        STATIC_DIR / "index.html",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+    )
 
 
 @app.get("/health")

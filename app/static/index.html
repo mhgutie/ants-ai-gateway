@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/ui/assets/styles.css" />
+    <link rel="stylesheet" href="/ui/assets/styles.css?v=2" />
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
@@ -83,69 +83,124 @@
         <article id="tab-workspace" class="tab-panel active">
           <div class="workspace-grid">
             
-            <!-- Left Panel: Challenge Intake -->
-            <section class="panel glass-panel">
-              <div class="panel-head border-bottom">
-                <div class="panel-title">
-                  <span class="pill ok">Intake</span>
-                  <h2>Describe Your Challenge</h2>
-                </div>
-              </div>
-              <form id="challenge-form" class="challenge-form stack">
-                <label>
-                  <span>Intake Mode</span>
-                  <select id="challenge-mode">
-                    <option value="app">Build an app</option>
-                    <option value="expert_team">Create an expert team</option>
-                    <option value="workflow">Generate a workflow</option>
-                    <option value="document">Analyze a document or process</option>
-                    <option value="proposal">Build a proposal or deliverable</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Project Name</span>
-                  <input id="challenge-project-name" type="text" placeholder="Example: ANTS Opportunity Scout" />
-                </label>
-                <label>
-                  <span>Task ID</span>
-                  <input id="challenge-task-id" type="text" value="ants-task-001" />
-                </label>
-                <label>
-                  <span>Context Scope</span>
-                  <select id="challenge-scope">
-                    <option value="limited">limited</option>
-                    <option value="selected_files">selected_files</option>
-                    <option value="full_repo">full_repo</option>
-                  </select>
-                </label>
-                <label class="checkbox-row">
-                  <input id="challenge-explicit" type="checkbox" />
-                  <span>Explicitly Authorized</span>
-                </label>
-                <label>
-                  <span>Describe what you need</span>
-                  <textarea id="challenge-request" rows="7" placeholder="Describe the company, app, workflow, or proposal you want ANTS to build..."></textarea>
-                </label>
-                
-                <!-- File Upload & Context Reference Uploader -->
-                <div class="file-upload-container">
-                  <span class="field-label">Reference Files & Context Attachments</span>
-                  <div id="file-dropzone" class="file-dropzone">
-                    <span class="upload-icon">📁</span>
-                    <p class="upload-text">Drag & drop files here or <span class="browse-link">browse</span></p>
-                    <span class="upload-subtext">Supports code files, text, JSON, PDF, and images (Max 5MB)</span>
-                    <input id="file-input" type="file" multiple class="hidden-input" />
+            <!-- Left Column Stack: Intake Form & Agent Roster -->
+            <div class="stack">
+              <!-- Challenge Intake -->
+              <section class="panel glass-panel">
+                <div class="panel-head border-bottom">
+                  <div class="panel-title">
+                    <span class="pill ok">Intake</span>
+                    <h2>Describe Your Challenge</h2>
                   </div>
-                  <div id="file-list" class="file-list hidden"></div>
                 </div>
-                <div class="form-actions">
-                  <button type="submit" class="btn primary-btn">Generate & Run Task</button>
-                  <button id="load-sample-btn" type="button" class="btn secondary">Load Sample</button>
-                </div>
-              </form>
-            </section>
+                <form id="challenge-form" class="challenge-form stack">
+                  <label>
+                    <span>Intake Mode</span>
+                    <select id="challenge-mode">
+                      <option value="app">Build an app</option>
+                      <option value="expert_team">Create an expert team</option>
+                      <option value="workflow">Generate a workflow</option>
+                      <option value="document">Analyze a document or process</option>
+                      <option value="proposal">Build a proposal or deliverable</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Project Name</span>
+                    <input id="challenge-project-name" type="text" placeholder="Example: ANTS Opportunity Scout" />
+                  </label>
+                  <label>
+                    <span>Task ID</span>
+                    <input id="challenge-task-id" type="text" value="ants-task-001" />
+                  </label>
+                  <label>
+                    <span>Context Scope</span>
+                    <select id="challenge-scope">
+                      <option value="limited">limited</option>
+                      <option value="selected_files">selected_files</option>
+                      <option value="full_repo">full_repo</option>
+                    </select>
+                  </label>
+                  <label class="checkbox-row">
+                    <input id="challenge-explicit" type="checkbox" />
+                    <span>Explicitly Authorized</span>
+                  </label>
+                  <label>
+                    <span>Describe what you need</span>
+                    <textarea id="challenge-request" rows="7" placeholder="Describe the company, app, workflow, or proposal you want ANTS to build..."></textarea>
+                  </label>
+                  
+                  <!-- File Upload & Context Reference Uploader -->
+                  <div class="file-upload-container">
+                    <span class="field-label">Reference Files & Context Attachments</span>
+                    <input id="file-input" type="file" multiple class="hidden-input" />
+                    <div id="file-dropzone" class="file-dropzone">
+                      <span class="upload-icon">📁</span>
+                      <p class="upload-text">Drag & drop files here or <span class="browse-link">browse</span></p>
+                      <span class="upload-subtext">Supports code files, text, JSON, PDF, and images (Max 5MB)</span>
+                    </div>
+                    <div id="file-list" class="file-list hidden"></div>
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="btn primary-btn">Generate & Run Task</button>
+                    <button id="load-sample-btn" type="button" class="btn secondary">Load Sample</button>
+                  </div>
+                </form>
+              </section>
 
-            <!-- Right Panel: Agent Chat & Traces -->
+              <!-- Agent Team Roster -->
+              <section class="panel glass-panel">
+                <div class="panel-head border-bottom">
+                  <div class="panel-title">
+                    <span class="pill highlight">Team</span>
+                    <h2>ANTS Agent Roster</h2>
+                  </div>
+                </div>
+                <div class="agent-roster">
+                  <div class="agent-card" id="agent-kimi">
+                    <span class="agent-avatar-mini">🧘</span>
+                    <div class="agent-info">
+                      <div class="agent-header">
+                        <strong>Kimi K2.6</strong>
+                        <span class="agent-status pill" id="status-kimi">Idle</span>
+                      </div>
+                      <span class="agent-role">Product PM & Architect</span>
+                    </div>
+                  </div>
+                  <div class="agent-card" id="agent-deepseek">
+                    <span class="agent-avatar-mini">🧠</span>
+                    <div class="agent-info">
+                      <div class="agent-header">
+                        <strong>DeepSeek Pro</strong>
+                        <span class="agent-status pill" id="status-deepseek">Idle</span>
+                      </div>
+                      <span class="agent-role">Strategic Decision Director</span>
+                    </div>
+                  </div>
+                  <div class="agent-card" id="agent-qwen">
+                    <span class="agent-avatar-mini">💻</span>
+                    <div class="agent-info">
+                      <div class="agent-header">
+                        <strong>Qwen3-Coder</strong>
+                        <span class="agent-status pill" id="status-qwen">Idle</span>
+                      </div>
+                      <span class="agent-role">Implementation Coder</span>
+                    </div>
+                  </div>
+                  <div class="agent-card" id="agent-gpt">
+                    <span class="agent-avatar-mini">🛡️</span>
+                    <div class="agent-info">
+                      <div class="agent-header">
+                        <strong>GPT-5.5</strong>
+                        <span class="agent-status pill" id="status-gpt">Idle</span>
+                      </div>
+                      <span class="agent-role">Quality & Harness Director</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right Column Panel: Agent Chat & Traces -->
             <section class="panel glass-panel flex-panel">
               <div class="panel-head border-bottom">
                 <div class="panel-title">
@@ -154,6 +209,39 @@
                 </div>
               </div>
               
+              <!-- Pipeline Operational Stepper -->
+              <div id="pipeline-stepper" class="pipeline-stepper">
+                <div class="step active" id="step-1">
+                  <span class="step-num">1</span>
+                  <span class="step-lbl">Intake</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-2">
+                  <span class="step-num">2</span>
+                  <span class="step-lbl">Spec</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-3">
+                  <span class="step-num">3</span>
+                  <span class="step-lbl">Route</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-4">
+                  <span class="step-num">4</span>
+                  <span class="step-lbl">Code</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-5">
+                  <span class="step-num">5</span>
+                  <span class="step-lbl">Harness</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-6">
+                  <span class="step-num">6</span>
+                  <span class="step-lbl">Memory</span>
+                </div>
+              </div>
+
               <!-- Routing & Preflight Status Badge -->
               <div id="routing-badge-container" class="routing-badge hidden">
                 <div class="routing-badge-main">
@@ -489,6 +577,6 @@
       </div>
     </div>
 
-    <script src="/ui/assets/app.js" defer></script>
+    <script src="/ui/assets/app.js?v=2" defer></script>
   </body>
 </html>

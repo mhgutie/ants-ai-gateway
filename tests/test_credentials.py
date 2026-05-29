@@ -15,7 +15,15 @@ def test_account_id_is_normalized_for_environment_names():
     assert normalize_account_id(None) == "DEFAULT"
 
 
+def clean_qwen_env(monkeypatch):
+    import os
+    for key in list(os.environ.keys()):
+        if key.startswith("QWEN__") or key == "QWEN_API_KEY":
+            monkeypatch.delenv(key, raising=False)
+
+
 def test_provider_secret_prefers_account_specific_key(monkeypatch):
+    clean_qwen_env(monkeypatch)
     monkeypatch.setenv("QWEN__DEFAULT__API_KEY", "default-key")
     monkeypatch.setenv("QWEN__1__API_KEY", "profile-1-key")
 
@@ -24,6 +32,7 @@ def test_provider_secret_prefers_account_specific_key(monkeypatch):
 
 
 def test_default_profile_pool_uses_profiles_before_default(monkeypatch):
+    clean_qwen_env(monkeypatch)
     monkeypatch.setenv("QWEN__DEFAULT__API_KEY", "default-key")
     monkeypatch.setenv("QWEN__2__API_KEY", "profile-2-key")
 
@@ -34,6 +43,7 @@ def test_default_profile_pool_uses_profiles_before_default(monkeypatch):
 
 
 def test_explicit_profile_is_tried_before_remaining_pool(monkeypatch):
+    clean_qwen_env(monkeypatch)
     monkeypatch.setenv("QWEN__1__API_KEY", "profile-1-key")
     monkeypatch.setenv("QWEN__3__API_KEY", "profile-3-key")
 

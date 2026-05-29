@@ -39,13 +39,13 @@ visual_analysis:
   validator: gpt-5.5
 
 long_document:
-  primary: gemini-3.5-flash
-  fallback: gemini-2.5-flash
+  primary: deepseek-v4-pro
+  fallback: kimi-k2.6
   validator: gpt-5.5
 
 google_workspace_processing:
-  primary: gemini-3.5-flash
-  fallback: gemini-2.5-flash
+  primary: deepseek-v4-pro
+  fallback: kimi-k2.6
   validator: gpt-5.5
 
 complex_reasoning:

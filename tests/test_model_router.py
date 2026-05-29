@@ -21,11 +21,11 @@ def test_coding_debug_routes_to_qwen3_coder_and_validates_with_gpt_5_4():
     assert provider_for(route["primary"]) == "qwen"
 
 
-def test_long_document_routes_to_gemini_3_5_flash():
+def test_long_document_routes_to_deepseek_v4_pro():
     route = route_for(TaskType.long_document)
-    assert route["primary"] == "gemini-3.5-flash"
-    assert route["fallback"] == "gemini-2.5-flash"
-    assert provider_for(route["primary"]) == "google"
+    assert route["primary"] == "deepseek-v4-pro"
+    assert route["fallback"] == "kimi-k2.6"
+    assert provider_for(route["primary"]) == "deepseek"
 
 
 def test_final_validation_routes_to_gpt_5_5_with_gpt_5_4_fallback():
@@ -58,10 +58,10 @@ def test_task_type_enum_covers_all_routing_rules():
     assert set(get_routing_rules()) <= task_type_values
 
 
-def test_google_workspace_processing_routes_to_gemini_3_5_flash():
+def test_google_workspace_processing_routes_to_deepseek_v4_pro():
     route = route_for(TaskType.google_workspace_processing)
-    assert route["primary"] == "gemini-3.5-flash"
-    assert route["fallback"] == "gemini-2.5-flash"
+    assert route["primary"] == "deepseek-v4-pro"
+    assert route["fallback"] == "kimi-k2.6"
 
 
 def test_complex_reasoning_uses_enabled_fallback_when_primary_disabled():
