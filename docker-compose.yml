@@ -8,3 +8,11 @@ services:
     environment:
       ANTS_ENV: ${ANTS_ENV:-local}
       ANTS_DEFAULT_PROVIDER: ${ANTS_DEFAULT_PROVIDER:-openrouter}
+    networks:
+      - default
+      - supabase
+
+networks:
+  supabase:
+    external: true
+    name: ${ANTS_SUPABASE_DOCKER_NETWORK:-supabase_default}

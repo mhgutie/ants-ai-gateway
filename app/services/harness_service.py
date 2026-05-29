@@ -10,6 +10,7 @@ from app.cost_calculator import real_cost_usd
 from app.model_router import provider_for
 from app.providers import get_provider_client
 from app.schemas import (
+    ChatMessage,
     ContextScope,
     GatewayRequest,
     HarnessCriterionResult,
@@ -129,8 +130,8 @@ async def validate_output(
         response = await provider.chat(
             model=_HARNESS_MODEL,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                ChatMessage(role="system", content=_SYSTEM_PROMPT),
+                ChatMessage(role="user", content=user_prompt),
             ],
             max_tokens=preflight.max_output_tokens,
             account_id=request.account_id,
