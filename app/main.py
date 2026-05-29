@@ -45,11 +45,17 @@ from app.schemas import (
     N8nClaimCandidatesResponse,
     N8nUpdateIntakeRequest,
     N8nUpdateIntakeResponse,
+    SpecBuildRequest,
+    SpecBuildResponse,
+    HarnessValidateRequest,
+    HarnessValidateResponse,
 )
 from app.services.ingest_service import convert_bytes as ingest_convert_bytes
 from app.services.ingest_service import convert_url as ingest_convert_url
 from app.services.preflight_service import run_preflight
 from app.services.usage_logger import log_usage
+from app.services.spec_builder_service import build_spec
+from app.services.harness_service import validate_output
 from app.executor_smoke import run_executor_smoke
 from app.tool_executors import list_executor_sessions, list_tool_executor_statuses
 from app.db_queries import (
@@ -418,3 +424,25 @@ async def ingest_convert(
     else:
         raise HTTPException(status_code=422, detail="Provide either 'file' or 'url'.")
     return IngestConvertResponse(**data)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Spec Builder + Harness Engine
+# ---------------------------------------------------------------------------
+
+@app.post(
+    "/spec/build",
+    response_model=SpecBuildResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def spec_build(request: SpecBuildRequest) -> SpecBuildResponse:
+    return await build_spec(request, db_create_spec_fn=create_spec)
+
+
+@app.post(
+    "/harness/validate",
+    response_model=HarnessValidateResponse,
+    dependencies=[Depends(require_gateway_api_key)],
+)
+async def harness_validate(request: HarnessValidateRequest) -> HarnessValidateResponse:
+    return await validate_output(request, get_spec_fn=get_specs)
