@@ -51,7 +51,18 @@ def test_sql_migrations_are_versioned_for_init_workflow_runs_and_n8n_contract():
         "001_init.sql",
         "002_add_workflow_runs.sql",
         "003_add_n8n_memory_contract.sql",
+        "004_add_rag_document_chunks.sql",
     } <= migration_names
+
+
+def test_rag_migration_has_vector_table_and_hnsw_index():
+    migration = MIGRATIONS_DIR / "004_add_rag_document_chunks.sql"
+    sql = migration.read_text(encoding="utf-8").lower()
+    assert "create extension if not exists vector" in sql
+    assert "create table if not exists document_chunks" in sql
+    assert "embedding vector(1536)" in sql
+    assert "hnsw" in sql
+    assert "row level security" in sql
 
 
 def test_secrets_registry_stores_references_not_secret_values():

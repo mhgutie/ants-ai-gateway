@@ -416,3 +416,49 @@ class HarnessValidateResponse(BaseModel):
     real_cost_usd: float | None
     spec_id: str | None
 
+
+# ---------------------------------------------------------------------------
+# Phase 6: RAG + Document Services
+# ---------------------------------------------------------------------------
+
+class RagIndexRequest(BaseModel):
+    document_id: str
+    content: str
+    title: str | None = None
+    project_id: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    chunk_size: int = Field(default=1800, ge=200, le=8000)
+    chunk_overlap: int = Field(default=200, ge=0, le=800)
+
+
+class RagIndexResponse(BaseModel):
+    document_id: str
+    chunks_indexed: int
+    embedding_model: str
+    stored_in: str
+
+
+class RagChunkResult(BaseModel):
+    document_id: str
+    title: str | None
+    chunk_index: int
+    content: str
+    score: float
+    metadata: dict[str, Any]
+
+
+class RagQueryRequest(BaseModel):
+    query: str
+    project_id: str | None = None
+    top_k: int = Field(default=5, ge=1, le=20)
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    document_ids: list[str] | None = None
+
+
+class RagQueryResponse(BaseModel):
+    query: str
+    results: list[RagChunkResult]
+    total: int
+    embedding_model: str
+    source: str
+
